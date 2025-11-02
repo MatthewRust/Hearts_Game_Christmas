@@ -1,0 +1,7 @@
+# Ignore dependencies
+backend/node_modules/
+frontend/node_modules/
+
+# Ignore logs and temp files
+*.log
+*.tmp
