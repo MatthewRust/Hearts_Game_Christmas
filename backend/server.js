@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import sqlite3 from 'sqlite3';
+import HeartGame from './heartGame.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -15,7 +16,9 @@ db.run(`CREATE TABLE IF NOT EXISTS players (
 )`);
 
 const connectedPlayers = new Map();
+
 let gameInProgress = false;
+let heartGame = null;
 
 function updateHost() {
   // Remove isHost from all
@@ -65,23 +68,73 @@ io.on('connection', (socket) => {
   });
 
   // Allow any client to request starting the game; server validates conditions
+
   socket.on('game:start', () => {
-    // If a game is already in progress, inform the requester
     if (gameInProgress) {
       socket.emit('game:start:error', { message: 'Game already in progress' });
       return;
     }
-
     const playerCount = connectedPlayers.size;
     if (playerCount < 2) {
       socket.emit('game:start:error', { message: 'Need at least 2 players to start the game' });
       return;
     }
-
-    // Mark game as started and broadcast to all clients
+    // Start backend game logic
+    const playerNames = Array.from(connectedPlayers.values()).map(p => p.name);
+    heartGame = new HeartGame(playerNames);
+    heartGame.setUpDeck();
+    heartGame.dealAllCards();
     gameInProgress = true;
     const players = Array.from(connectedPlayers.values());
+    // Send initial hands and game state to each player
+    players.forEach((player) => {
+      const hand = heartGame.players[player.name]?.cards || [];
+      io.to(player.id).emit('game:hand', { hand });
+    });
+    io.emit('game:state', {
+      turn: heartGame.getCurrentPlayer(),
+      pile: heartGame.pile.cards,
+      scores: heartGame.scores,
+      round: heartGame.round,
+    });
     io.emit('game:started', { players, startedAt: Date.now() });
+  });
+
+
+  // Player plays a card
+  socket.on('game:playCard', ({ playerName, card }) => {
+    if (!gameInProgress || !heartGame) {
+      socket.emit('game:play:error', { message: 'No game in progress' });
+      return;
+    }
+    try {
+      heartGame.playCard(playerName, card);
+      // Update all hands (send only to each player)
+      for (const [id, player] of connectedPlayers.entries()) {
+        const hand = heartGame.players[player.name]?.cards || [];
+        io.to(id).emit('game:hand', { hand });
+      }
+      // Broadcast updated game state
+      io.emit('game:state', {
+        turn: heartGame.getCurrentPlayer(),
+        pile: heartGame.pile.cards,
+        scores: heartGame.scores,
+        round: heartGame.round,
+      });
+      // If trick resolved, broadcast winner and reset pile
+      if (heartGame.pile.cards.length === 0) {
+        io.emit('game:trickResolved', {
+          scores: heartGame.scores,
+          turn: heartGame.getCurrentPlayer(),
+        });
+        // If round is over, broadcast round end
+        if (heartGame.isRoundOver()) {
+          io.emit('game:roundEnded', { scores: heartGame.scores });
+        }
+      }
+    } catch (err) {
+      socket.emit('game:play:error', { message: err.message });
+    }
   });
 
   // Allow ending the current game and resetting server-side game state
@@ -90,10 +143,9 @@ io.on('connection', (socket) => {
       socket.emit('game:end:error', { message: 'No game in progress' });
       return;
     }
-
     // Reset game state on server
     gameInProgress = false;
-
+    heartGame = null;
     // Broadcast to all clients that the game has ended and server is reset
     io.emit('game:ended', { message: 'Game ended by request', resetAt: Date.now() });
   });

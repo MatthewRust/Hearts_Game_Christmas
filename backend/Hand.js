@@ -1,4 +1,4 @@
-const Card = require('./Card');
+import Card from './Card.js';
 
 class Hand {
   constructor() {
@@ -19,4 +19,4 @@ class Hand {
   }
 }
 
-module.exports = Hand;
+export default Hand;
