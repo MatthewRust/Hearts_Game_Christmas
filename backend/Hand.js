@@ -5,14 +5,6 @@ class Hand {
     this.cards = [];
   }
 
-  get Cards() {
-    return this.cards;
-  }
-
-  set Cards(value) {
-    this.cards = value;
-  }
-
   addCard(card) {
     this.cards.push(card);
   }

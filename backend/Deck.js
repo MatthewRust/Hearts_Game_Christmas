@@ -1,3 +1,5 @@
+const Card = require('./Card');
+
 class Deck {
   constructor() {
     this._cards = []; // internal array
@@ -23,6 +25,36 @@ class Deck {
       }
     }
   }
-}
 
+  // Standard Hearts deck: 52 cards, values for scoring
+  makeDeck(suits, ranks) {
+    for (const suit of suits) {
+      for (const rank of ranks) {
+        if (rank == 'Queen' && suit == 'Spades') {
+          this.addCard(new Card("Scabby", "Queen", 13));
+        }
+        if (rank == 'Hearts') {
+            this.addCard(new Card(suit, rank, 1));
+            if (['2', '3', '4', '5', '6', '7', '8', '9', '10'].includes(rank)) {
+                this.addCard(new Card(suit, rank, 1));
+            }
+            if (rank == 'Jack') {
+                this.addCard(new Card(suit, rank, 2));
+            }
+            if (rank == 'Queen') {
+                this.addCard(new Card(suit, rank, 3));
+            }
+            if (rank == 'King') {
+                this.addCard(new Card(suit, rank, 4));
+            }
+            if (rank == 'Ace') {
+                this.addCard(new Card(suit, rank, 5));
+            }
+        } else {
+            this.addCard(new Card(suit, rank, 0));
+        }
+      }
+    }
+}
+}
 module.exports = Deck;

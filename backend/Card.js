@@ -1,23 +1,29 @@
 class Card {
-  constructor(suit, rank) {
-    this.suit = suit;
-    this.rank = rank;
-  } // Constructor to initialize suit and rank
+  constructor(suit, rank, value) {
+    this._suit = suit;
+    this._rank = rank;
+    this._value = value;
+  }
 
-  get suit() { // Getter and setters for suit and rank
-    return this.suit;
+  get suit() {
+    return this._suit;
+  }
+  set suit(value) {
+    this._suit = value;
   }
 
   get rank() {
-    return this.rank;
+    return this._rank;
+  }
+  set rank(value) {
+    this._rank = value;
   }
 
-  set suit(value) {
-    this.suit = value;
-    }
-
-set rank(value) {
-    this.rank = value;
+  get value() {
+    return this._value;
+  }
+  set value(value) {
+    this._value = value;
   }
 }
 
