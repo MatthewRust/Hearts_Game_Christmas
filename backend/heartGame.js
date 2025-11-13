@@ -59,6 +59,11 @@ class HeartGame {
       this.deck.removeCard(card);
       i++;
     }
+    // Optionally sort hands for consistency (by suit then rank)
+    const rankOrder = ['2','3','4','5','6','7','8','9','10','Jack','Queen','King','Ace'];
+    Object.values(this.players).forEach(hand => {
+      hand.cards.sort((a,b) => (a.suit.localeCompare(b.suit)) || (rankOrder.indexOf(a.rank) - rankOrder.indexOf(b.rank)));
+    });
   }
 
   // Get the name of the player whose turn it is
@@ -77,13 +82,20 @@ class HeartGame {
       throw new Error("Not this player's turn");
     }
     const hand = this.players[playerName];
+    // Enforce hearts not being led until broken, unless only hearts are in hand
+    if (this.pile.cards.length === 0 && card.suit === 'Hearts' && !this.heartsBroken) {
+      const hasNonHearts = hand.cards.some(c => c.suit !== 'Hearts');
+      if (hasNonHearts) {
+        throw new Error('Cannot lead Hearts until they are broken');
+      }
+    }
     if (!this.pile.isLegalPlay(card, hand)) {
       throw new Error('Illegal play: must follow suit if possible');
     }
     hand.removeCard(card);
     this.pile.addCard(card, playerName);
-    // If a heart is played, mark hearts as broken
-    if (card.suit === 'Hearts') {
+    // If a heart or Q♠ is played, mark hearts as broken
+    if (card.suit === 'Hearts' || (card.suit === 'Spades' && card.rank === 'Queen')) {
       this.heartsBroken = true;
     }
     // If pile is full, resolve trick
@@ -119,9 +131,36 @@ class HeartGame {
     this.dealAllCards();
     this.pile = new Pile();
     this.heartsBroken = false;
-    // Optionally rotate turn order for fairness
-    // this.turnOrder.push(this.turnOrder.shift());
+    // Set leader to the player with 2 of Clubs if present
+    this.setInitialLeader();
+  }
+
+  // Determine leader based on holder of 2 of Clubs, fallback to index 0
+  setInitialLeader() {
+    const twoClubs = { suit: 'Clubs', rank: '2' };
+    for (const [playerName, hand] of Object.entries(this.players)) {
+      if (hand.cards.some(c => c.suit === twoClubs.suit && c.rank === twoClubs.rank)) {
+        this.currentTurnIndex = this.turnOrder.indexOf(playerName);
+        return;
+      }
+    }
     this.currentTurnIndex = 0;
+  }
+
+  // Compute standings: least points is best. Dense ranking for ties.
+  getStandings() {
+    const entries = Object.entries(this.scores).map(([player, score]) => ({ player, score }));
+    entries.sort((a, b) => a.score - b.score);
+    // Dense ranking
+    let place = 0;
+    let lastScore = null;
+    return entries.map((e) => {
+      if (lastScore === null || e.score !== lastScore) {
+        place += 1;
+        lastScore = e.score;
+      }
+      return { player: e.player, score: e.score, place };
+    });
   }
 }
 

@@ -25,6 +25,15 @@ class Card {
   set value(value) {
     this._value = value;
   }
+
+  // Ensure clean JSON serialization to clients
+  toJSON() {
+    return {
+      suit: this._suit,
+      rank: this._rank,
+      value: this._value,
+    };
+  }
 }
 
 export default Card;

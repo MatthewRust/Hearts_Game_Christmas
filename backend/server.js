@@ -27,7 +27,10 @@ function updateHost() {
   }
   // Assign host to first player (if any)
   const first = connectedPlayers.values().next().value;
-  if (first) first.isHost = true;
+  if (first) {
+    first.isHost = true;
+    io.emit('player:host', { playerId: first.id });
+  }
 }
 
 function broadcastPlayers() {
@@ -82,8 +85,9 @@ io.on('connection', (socket) => {
     // Start backend game logic
     const playerNames = Array.from(connectedPlayers.values()).map(p => p.name);
     heartGame = new HeartGame(playerNames);
-    heartGame.setUpDeck();
-    heartGame.dealAllCards();
+  heartGame.setUpDeck();
+  heartGame.dealAllCards();
+  heartGame.setInitialLeader();
     gameInProgress = true;
     const players = Array.from(connectedPlayers.values());
     // Send initial hands and game state to each player
@@ -128,8 +132,12 @@ io.on('connection', (socket) => {
           turn: heartGame.getCurrentPlayer(),
         });
         // If round is over, broadcast round end
+
         if (heartGame.isRoundOver()) {
-          io.emit('game:roundEnded', { scores: heartGame.scores });
+          const standings = heartGame.getStandings();
+          io.emit('game:over', { standings, endedAt: Date.now() });
+          gameInProgress = false;
+          heartGame = null;
         }
       }
     } catch (err) {

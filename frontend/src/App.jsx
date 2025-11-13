@@ -14,68 +14,101 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameInfo, setGameInfo] = useState(null);
+  // Gameplay state
+  const [hand, setHand] = useState([]);
+  const [turn, setTurn] = useState(null);
+  const [pile, setPile] = useState([]);
+  const [scores, setScores] = useState({});
+  const [round, setRound] = useState(1);
+  const [standings, setStandings] = useState(null);
+  const [gameOver, setGameOver] = useState(false);
 
   useEffect(() => {
-    socket.on('players:update', (updatedPlayers) => {
-      setPlayers(updatedPlayers);
-    });
+    const notify = (text) => {
+      const id = `${Date.now()}`;
+      setNotifications((prev) => [...prev, { id, text }]);
+      setTimeout(() => setNotifications((prev) => prev.filter(n => n.id !== id)), 5000);
+    };
 
-    socket.on('join:success', (player) => {
-      setJoined(true);
-    });
-
-    socket.on('game:started', (data) => {
-      // data contains players and startedAt
+    const onPlayersUpdate = (updatedPlayers) => setPlayers(updatedPlayers);
+    const onJoinSuccess = () => setJoined(true);
+    const onGameStarted = (data) => {
       setGameInfo(data);
       setGameStarted(true);
-    });
-
-    socket.on('game:ended', ({ message }) => {
-      // Reset client-side game state and show a notification
+      setGameOver(false);
+      setStandings(null);
+      setPile([]);
+      setScores({});
+    };
+    const onGameEnded = ({ message }) => {
       setGameStarted(false);
       setGameInfo(null);
-      const id = `ended:${Date.now()}`;
-      setNotifications((prev) => [...prev, { id, text: message || 'Game ended' }]);
-      setTimeout(() => setNotifications((prev) => prev.filter(n => n.id !== id)), 5000);
-    });
-
-    socket.on('game:start:error', ({ message }) => {
-      const id = `err:${Date.now()}`;
-      setNotifications((prev) => [...prev, { id, text: message }]);
-      setTimeout(() => setNotifications((prev) => prev.filter(n => n.id !== id)), 5000);
-    });
-
-    socket.on('player:left', ({ playerId, name }) => {
-      // Use the provided name if available; otherwise try to find it locally
-      const playerName = name || (players.find(p => p.id === playerId) || {}).name || 'A player';
-      const id = `${playerId}:${Date.now()}`;
-      const text = `${playerName} has left the game`;
-      setNotifications((prev) => [...prev, { id, text }]);
-
-      // Auto-remove this notification after 5 seconds
-      setTimeout(() => {
-        setNotifications((prev) => prev.filter(n => n.id !== id));
-      }, 5000);
-
-    socket.on('player:host', ({ playerId }) => {
-      const player = players.find(p => p.id === playerId);
-      if (player) {
-        const id = `host:${Date.now()}`;
-        setNotifications((prev) => [...prev, { id, text: `${player.name} is the host` }]);
-        setTimeout(() => setNotifications((prev) => prev.filter(n => n.id !== id)), 5000);
-      }
-    });
-  }, []);
-
-  return () => {
-      socket.off('players:update');
-      socket.off('join:success');
-      socket.off('player:left');
-      socket.off('game:started');
-      socket.off('game:start:error');
-      socket.off('game:ended');
+      setHand([]);
+      setPile([]);
+      setScores({});
+      setStandings(null);
+      notify(message || 'Game ended');
     };
-  }, []);
+    const onStartError = ({ message }) => notify(message);
+    const onPlayerLeft = ({ playerId, name }) => {
+      const playerName = name || (players.find(p => p.id === playerId) || {}).name || 'A player';
+      notify(`${playerName} has left the game`);
+    };
+    const onPlayerHost = ({ playerId }) => {
+      const player = players.find(p => p.id === playerId);
+      if (player) notify(`${player.name} is the host`);
+    };
+    const onGameHand = ({ hand }) => {
+      // Debug: log received hand length and sample
+      try { console.log('game:hand received', Array.isArray(hand) ? hand.length : hand); } catch {}
+      setHand(hand || []);
+    };
+    const onGameState = ({ turn, pile, scores, round }) => {
+      try { console.log('game:state', { turn, pileLen: pile?.length, scores, round }); } catch {}
+      if (turn !== undefined) setTurn(turn);
+      if (pile !== undefined) setPile(pile || []);
+      if (scores !== undefined) setScores(scores || {});
+      if (round !== undefined) setRound(round || 1);
+    };
+    const onTrickResolved = ({ scores: sc, turn: t }) => {
+      if (sc) setScores(sc);
+      if (t) setTurn(t);
+    };
+    const onGameOver = ({ standings }) => {
+      setStandings(standings || []);
+      setGameOver(true);
+    };
+    const onPlayError = ({ message }) => notify(message || 'Illegal play');
+
+    socket.on('players:update', onPlayersUpdate);
+    socket.on('join:success', onJoinSuccess);
+    socket.on('game:started', onGameStarted);
+    socket.on('game:ended', onGameEnded);
+    socket.on('game:start:error', onStartError);
+    socket.on('player:left', onPlayerLeft);
+    socket.on('player:host', onPlayerHost);
+    // Gameplay events
+    socket.on('game:hand', onGameHand);
+    socket.on('game:state', onGameState);
+    socket.on('game:trickResolved', onTrickResolved);
+    socket.on('game:over', onGameOver);
+    socket.on('game:play:error', onPlayError);
+
+    return () => {
+      socket.off('players:update', onPlayersUpdate);
+      socket.off('join:success', onJoinSuccess);
+      socket.off('game:started', onGameStarted);
+      socket.off('game:ended', onGameEnded);
+      socket.off('game:start:error', onStartError);
+      socket.off('player:left', onPlayerLeft);
+      socket.off('player:host', onPlayerHost);
+      socket.off('game:hand', onGameHand);
+      socket.off('game:state', onGameState);
+      socket.off('game:trickResolved', onTrickResolved);
+      socket.off('game:over', onGameOver);
+      socket.off('game:play:error', onPlayError);
+    };
+  }, [players]);
 
   const joinGame = () => {
     if (name.trim()) {
@@ -107,7 +140,21 @@ function App() {
           </button>
         </div>
       ) : (
-        gameStarted ? <GameScreen gameInfo={gameInfo} /> : (
+        gameStarted ? (
+          <GameScreen
+            gameInfo={gameInfo}
+            name={name}
+            hand={hand}
+            turn={turn}
+            pile={pile}
+            scores={scores}
+            round={round}
+            standings={standings}
+            gameOver={gameOver}
+            onPlayCard={(card) => socket.emit('game:playCard', { playerName: name, card })}
+            onEnd={() => socket.emit('game:end')}
+          />
+        ) : (
           <WaitingRoom
             name={name}
             players={players}
