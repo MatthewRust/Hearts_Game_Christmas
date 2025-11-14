@@ -121,7 +121,34 @@ class HeartGame {
 
   // Check if round is over (all hands empty)
   isRoundOver() {
-    return Object.values(this.players).every(hand => hand.cards.length === 0);
+    const allEmpty = Object.values(this.players).every(hand => hand.cards.length === 0);
+    if (allEmpty) {
+      this.checkShootTheMoon();
+    }
+    return allEmpty;
+  }
+
+  // Check for "Shoot the Moon": if one player has all 36 points, give them 0 and everyone else 36
+  checkShootTheMoon() {
+    // Calculate round points (not cumulative)
+    const roundPoints = {};
+    for (const player of this.turnOrder) {
+      roundPoints[player] = this.scores[player] || 0;
+    }
+    
+    // Check if exactly one player has 36 points
+    const playersWith36 = Object.entries(roundPoints).filter(([p, pts]) => pts === 36);
+    
+    if (playersWith36.length === 1) {
+      const shooter = playersWith36[0][0];
+      // Reset shooter to 0, give everyone else 36
+      this.scores[shooter] = 0;
+      for (const player of this.turnOrder) {
+        if (player !== shooter) {
+          this.scores[player] = 36;
+        }
+      }
+    }
   }
 
   // Start a new round
