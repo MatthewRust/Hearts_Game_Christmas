@@ -1,4 +1,4 @@
-import Hand from './Hand.js';
+import Hand from '../cardProps/Hand.js';
 
 class Pile extends Hand {
   constructor() {

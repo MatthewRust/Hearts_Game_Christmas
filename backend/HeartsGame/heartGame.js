@@ -1,6 +1,6 @@
-import Card from './Card.js';
-import Deck from './Deck.js';
-import Hand from './Hand.js';
+import Card from '../cardProps/Card.js';
+import Deck from '../cardProps/Deck.js';
+import Hand from '../cardProps/Hand.js';
 import Pile from './Pile.js';
 
 class HeartGame {
@@ -10,15 +10,18 @@ class HeartGame {
       this.players[name] = new Hand();
     });
     this.deck = new Deck();
-    this.scores = {};
+    this.scores = {}; // per-round scores
+    this.totalScores = {}; // cumulative across rounds
     playerNames.forEach(name => {
       this.scores[name] = 0;
+      this.totalScores[name] = 0;
     });
     this.turnOrder = [...playerNames]; // array of player names in play order
     this.currentTurnIndex = 0; // index in turnOrder
     this.pile = new Pile();
     this.heartsBroken = false;
     this.round = 1;
+    this.roundsToPlay = Math.max(playerNames.length, 1);
   }
 
   setUpDeck() {
@@ -121,11 +124,26 @@ class HeartGame {
 
   // Check if round is over (all hands empty)
   isRoundOver() {
-    const allEmpty = Object.values(this.players).every(hand => hand.cards.length === 0);
-    if (allEmpty) {
-      this.checkShootTheMoon();
+    return Object.values(this.players).every(hand => hand.cards.length === 0);
+  }
+
+  // Finish current round: apply shoot-the-moon, update totals, build summary
+  finishRound() {
+    this.checkShootTheMoon();
+
+    // Add this round's scores to totals
+    for (const player of this.turnOrder) {
+      this.totalScores[player] = (this.totalScores[player] || 0) + (this.scores[player] || 0);
     }
-    return allEmpty;
+
+    const summary = {
+      round: this.round,
+      roundScores: { ...this.scores },
+      totalScores: { ...this.totalScores },
+      standings: this.getStandings(),
+    };
+
+    return summary;
   }
 
   // Check for "Shoot the Moon": if one player has all 36 points, give them 0 and everyone else 36
@@ -154,6 +172,10 @@ class HeartGame {
   // Start a new round
   startNewRound() {
     this.round++;
+    // reset per-round scores
+    for (const player of this.turnOrder) {
+      this.scores[player] = 0;
+    }
     this.setUpDeck();
     this.dealAllCards();
     this.pile = new Pile();
@@ -176,7 +198,7 @@ class HeartGame {
 
   // Compute standings: least points is best. Dense ranking for ties.
   getStandings() {
-    const entries = Object.entries(this.scores).map(([player, score]) => ({ player, score }));
+    const entries = Object.entries(this.totalScores).map(([player, score]) => ({ player, score }));
     entries.sort((a, b) => a.score - b.score);
     // Dense ranking
     let place = 0;
@@ -188,6 +210,10 @@ class HeartGame {
       }
       return { player: e.player, score: e.score, place };
     });
+  }
+
+  hasMoreRounds() {
+    return this.round < this.roundsToPlay;
   }
 }
 

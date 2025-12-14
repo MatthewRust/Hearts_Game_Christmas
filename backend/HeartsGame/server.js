@@ -6,7 +6,14 @@ import HeartGame from './heartGame.js';
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { 
+  cors: { 
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+console.log('Socket.IO server initialized with CORS: *');
 
 const db = new sqlite3.Database('./players.db');
 db.run(`CREATE TABLE IF NOT EXISTS players (
@@ -40,6 +47,7 @@ function broadcastPlayers() {
 
 io.on('connection', (socket) => {
   console.log('Player connected:', socket.id);
+  console.log('Transport:', socket.conn.transport.name);
 
   // Handle player disconnection
   socket.on('disconnect', () => {
@@ -99,6 +107,7 @@ io.on('connection', (socket) => {
       turn: heartGame.getCurrentPlayer(),
       pile: heartGame.pile.cards,
       scores: heartGame.scores,
+      totalScores: heartGame.totalScores,
       round: heartGame.round,
     });
     io.emit('game:started', { players, startedAt: Date.now() });
@@ -123,6 +132,7 @@ io.on('connection', (socket) => {
         turn: heartGame.getCurrentPlayer(),
         pile: heartGame.pile.cards,
         scores: heartGame.scores,
+        totalScores: heartGame.totalScores,
         round: heartGame.round,
       });
       // If trick resolved, broadcast winner and reset pile
@@ -134,10 +144,28 @@ io.on('connection', (socket) => {
         // If round is over, broadcast round end
 
         if (heartGame.isRoundOver()) {
-          const standings = heartGame.getStandings();
-          io.emit('game:over', { standings, endedAt: Date.now() });
-          gameInProgress = false;
-          heartGame = null;
+          const roundSummary = heartGame.finishRound();
+          io.emit('game:roundEnd', roundSummary);
+
+          if (heartGame.hasMoreRounds()) {
+            heartGame.startNewRound();
+            const players = Array.from(connectedPlayers.values());
+            players.forEach((player) => {
+              const hand = heartGame.players[player.name]?.cards || [];
+              io.to(player.id).emit('game:hand', { hand });
+            });
+            io.emit('game:state', {
+              turn: heartGame.getCurrentPlayer(),
+              pile: heartGame.pile.cards,
+              scores: heartGame.scores,
+              totalScores: heartGame.totalScores,
+              round: heartGame.round,
+            });
+          } else {
+            io.emit('game:over', { standings: roundSummary.standings, endedAt: Date.now(), totalScores: heartGame.totalScores });
+            gameInProgress = false;
+            heartGame = null;
+          }
         }
       }
     } catch (err) {
@@ -163,6 +191,7 @@ app.get('/', (req, res) => {
   res.send('Hearts backend running');
 });
 
-server.listen(3001, () => {
-  console.log('Backend listening on port 3001');
+server.listen(3001, '0.0.0.0', () => {
+  console.log('Backend listening on 0.0.0.0:3001');
+  console.log('Socket.IO ready for connections');
 });

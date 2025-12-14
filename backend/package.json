@@ -1,7 +1,7 @@
 {
   "name": "hearts-backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "HeartsGame/server.js",
   "type": "module",
   "dependencies": {
     "express": "^4.21.2",
@@ -11,7 +11,7 @@
   "description": "",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node HeartsGame/server.js"
   },
   "keywords": [],
   "author": "",
