@@ -24,6 +24,13 @@ class HeartGame {
     this.roundsToPlay = Math.max(playerNames.length, 1);
   }
 
+  sortHands() {
+    const rankOrder = ['2','3','4','5','6','7','8','9','10','Jack','Queen','King','Ace'];
+    Object.values(this.players).forEach(hand => {
+      hand.cards.sort((a, b) => (a.suit.localeCompare(b.suit)) || (rankOrder.indexOf(a.rank) - rankOrder.indexOf(b.rank)));
+    });
+  }
+
   setUpDeck() {
     const suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
     const ranks = [
@@ -62,11 +69,40 @@ class HeartGame {
       this.deck.removeCard(card);
       i++;
     }
-    // Optionally sort hands for consistency (by suit then rank)
-    const rankOrder = ['2','3','4','5','6','7','8','9','10','Jack','Queen','King','Ace'];
-    Object.values(this.players).forEach(hand => {
-      hand.cards.sort((a,b) => (a.suit.localeCompare(b.suit)) || (rankOrder.indexOf(a.rank) - rankOrder.indexOf(b.rank)));
-    });
+    this.sortHands();
+  }
+
+  // Determine how far to pass this round (final round => no pass)
+  getPassDistance() {
+    if (this.round === this.roundsToPlay) return 0;
+    const dist = this.round % this.turnOrder.length;
+    return dist === 0 ? 0 : dist;
+  }
+
+  // Find the pass target for a player given the current distance
+  getPassTarget(playerName, distance = this.getPassDistance()) {
+    if (!distance) return null;
+    const idx = this.turnOrder.indexOf(playerName);
+    if (idx === -1) return null;
+    const targetIdx = (idx + distance) % this.turnOrder.length;
+    return this.turnOrder[targetIdx];
+  }
+
+  // Apply collected passes: map of playerName -> card objects
+  applyPasses(passSelections = {}) {
+    const distance = this.getPassDistance();
+    if (!distance) return; // nothing to do
+
+    for (const [playerName, cards] of Object.entries(passSelections)) {
+      const target = this.getPassTarget(playerName, distance);
+      if (!target) continue;
+      const targetHand = this.players[target];
+      cards.forEach((card) => {
+        targetHand.addCard(card);
+      });
+    }
+
+    this.sortHands();
   }
 
   // Get the name of the player whose turn it is

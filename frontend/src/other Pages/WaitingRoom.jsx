@@ -7,17 +7,17 @@ import { AlertCircle } from 'lucide-react';
 
 export default function WaitingRoom() {
   const navigate = useNavigate();
-  const {joined,playerName, players, isHost, gameStarted, notifications, loading, error, startGame} = useGame();
+  const {joined,playerName, players, isHost, gameStarted, passPending, notifications, loading, error, startGame} = useGame();
 
   useEffect(() => {
     if (!joined) {navigate('/');}
   }, [joined, navigate]);
 
   useEffect(() => {
-    if (gameStarted) {
+    if (gameStarted || passPending) {
       navigate('/game');
     }
-  }, [gameStarted, navigate]);
+  }, [gameStarted, passPending, navigate]);
 
   if (!joined) return null;
 
@@ -26,7 +26,7 @@ export default function WaitingRoom() {
       <div className="max-w-2xl mx-auto space-y-6">
         <Card className="bg-gray-800 border-gray-700 p-6">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-red-500 mb-2">♥ Hearts</h1>
+            <h1 className="text-4xl font-bold text-black-500 mb-2"> Scabby Queen</h1>
             <p className="text-gray-300 text-lg">Welcome, <span className="font-semibold text-blue-400">{playerName}</span>!</p>
           </div>
         </Card>
@@ -57,21 +57,43 @@ export default function WaitingRoom() {
               <p className="text-gray-300">
                 Your the host click the button at the bottom to start the game when ready!!!!
               </p>
-              <Button
-                onClick={startGame}
-                disabled={players.length < 2 || loading}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
-                size="lg"
-              >
-                {loading ? 'Starting...' : 'Start Game'}
-              </Button>
+              <div className="grid grid-cols-1 gap-3">
+                <Button
+                  onClick={startGame}
+                  disabled={players.length < 2 || loading}
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                  size="lg"
+                >
+                  {loading ? 'Starting...' : 'Start Scabby Queeny game'}
+                </Button>
+                <Button
+                  onClick={() => navigate('/spit')}
+                  disabled={players.length !== 2}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                  size="lg"
+                >
+                  Start Spit (2 players)
+                </Button>
+              </div>
             </div>
           )}
 
           {!isHost && (
-            <p className="text-gray-400 text-center">
-              Waiting for <span className="font-semibold">{players.find((p) => p.isHost)?.name || 'host'}</span> to start the game...
-            </p>
+            <div className="space-y-4">
+              <p className="text-gray-400 text-center">
+                Waiting for <span className="font-semibold">{players.find((p) => p.isHost)?.name || 'host'}</span> to start the game...
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <Button
+                  onClick={() => navigate('/spit')}
+                  disabled={players.length !== 2}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                  size="lg"
+                >
+                  Start Spit (2 players)
+                </Button>
+              </div>
+            </div>
           )}
         </Card>
 

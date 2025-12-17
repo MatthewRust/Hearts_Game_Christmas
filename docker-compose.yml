@@ -15,4 +15,6 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    environment:
+      - VITE_BACKEND_URL=https://untaxing-adina-peakless.ngrok-free.dev
     restart: unless-stopped

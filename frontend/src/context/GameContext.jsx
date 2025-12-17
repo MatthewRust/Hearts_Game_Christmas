@@ -32,6 +32,9 @@ export const GameProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [passPending, setPassPending] = useState(false);
+  const [passInfo, setPassInfo] = useState(null);
+  const [passSubmitted, setPassSubmitted] = useState(false);
 
   // Initialize socket connection (once)
   useEffect(() => {
@@ -43,12 +46,14 @@ export const GameProvider = ({ children }) => {
     console.log('Initializing socket connection to:', socketUrl);
 
     const socket = io(socketUrl, {
-      transports: ['polling'], // Start with polling only (more reliable)
+      transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
       reconnection: true,
-      reconnectionAttempts: 3,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      timeout: 5000,
+      timeout: 10000,
       forceNew: true,
+      path: '/socket.io/',
+      withCredentials: true,
     });
 
     socketRef.current = socket;
@@ -89,7 +94,10 @@ export const GameProvider = ({ children }) => {
 
     socket.on('game:started', (data) => {
       setGameInfo(data);
-      setGameStarted(true);
+      setGameStarted(!data?.passPending);
+      setPassPending(Boolean(data?.passPending));
+      setPassSubmitted(false);
+      setPassInfo(null);
       setGameOver(false);
       setStandings(null);
       setPile([]);
@@ -106,6 +114,9 @@ export const GameProvider = ({ children }) => {
       setPile([]);
       setScores({});
       setStandings(null);
+      setPassPending(false);
+      setPassInfo(null);
+      setPassSubmitted(false);
       addNotification(message || 'Game ended');
     });
 
@@ -131,6 +142,41 @@ export const GameProvider = ({ children }) => {
       setHand(hand || []);
     });
 
+    socket.on('game:passPending', ({ round: r, distance, target }) => {
+      setPassPending(true);
+      setPassSubmitted(false);
+      setPassInfo({ round: r, distance, target });
+      setLoading(false);
+    });
+
+    socket.on('game:roundPassPending', ({ round: r, distance }) => {
+      setPassPending(true);
+      setPassSubmitted(false);
+      setPassInfo({ round: r, distance });
+      setLoading(false);
+    });
+
+    socket.on('game:passAccepted', ({ hand: updatedHand }) => {
+      if (Array.isArray(updatedHand)) {
+        setHand(updatedHand);
+      }
+      setPassSubmitted(true);
+      setLoading(false);
+    });
+
+    socket.on('game:passComplete', ({ round: r }) => {
+      setGameStarted(true);
+      setPassPending(false);
+      setPassInfo({ round: r });
+      setPassSubmitted(false);
+    });
+
+    socket.on('game:pass:error', ({ message }) => {
+      setError(message);
+      addNotification(message || 'Pass selection error');
+      setLoading(false);
+    });
+
     socket.on('game:state', ({ turn, pile, scores, totalScores, round }) => {
       if (turn !== undefined) setTurn(turn);
       if (pile !== undefined) setPile(pile || []);
@@ -152,12 +198,17 @@ export const GameProvider = ({ children }) => {
       setTotals(totalScores || {});
       setStandings(st || []);
       setLastRoundSummary({ round: r, roundScores: roundScores || {}, totalScores: totalScores || {} });
+      setPassPending(false);
+      setPassSubmitted(false);
     });
 
     socket.on('game:over', ({ standings: s, totalScores }) => {
       if (totalScores !== undefined) setTotals(totalScores || {});
       setStandings(s || []);
       setGameOver(true);
+      setPassPending(false);
+      setPassSubmitted(false);
+      setPassInfo(null);
     });
 
     socket.on('game:play:error', ({ message }) => {
@@ -221,6 +272,18 @@ export const GameProvider = ({ children }) => {
     [playerName]
   );
 
+  const selectPass = useCallback(
+    (cards) => {
+      setLoading(true);
+      setError(null);
+      socketRef.current?.emit('game:selectPass', {
+        playerName,
+        cards,
+      });
+    },
+    [playerName]
+  );
+
   const endGame = useCallback(() => {
     socketRef.current?.emit('game:end');
   }, []);
@@ -245,10 +308,14 @@ export const GameProvider = ({ children }) => {
     error,
     connected,
     lastRoundSummary,
-    isMyTurn: turn === playerName,
+    passPending,
+    passInfo,
+    passSubmitted,
+    isMyTurn: turn === playerName && !passPending,
     joinGame,
     startGame,
     playCard,
+    selectPass,
     endGame,
     addNotification,
   };

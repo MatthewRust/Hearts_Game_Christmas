@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '@/context/GameContext';
 import { Button } from '@/components/ui/button';
@@ -21,19 +21,47 @@ export default function GamePage() {
     standings,
     isMyTurn,
     loading,
+    passPending,
+    passInfo,
+    passSubmitted,
     endGame,
     playCard,
+    selectPass,
     lastRoundSummary,
   } = useGame();
 
+  const [selectedPass, setSelectedPass] = useState([]);
+
   useEffect(() => {
-    if (!gameStarted) {
+    if (!gameStarted && !passPending) {
       navigate('/waiting-room');
     }
-  }, [gameStarted, navigate]);
+  }, [gameStarted, passPending, navigate]);
+
+  useEffect(() => {
+    if (!passPending) {
+      setSelectedPass([]);
+    }
+  }, [passPending]);
 
   const handlePlayCard = (card) => {
+    if (passPending) return;
     playCard(card);
+  };
+
+  const togglePassSelection = (card) => {
+    const key = `${card.suit}-${card.rank}`;
+    const exists = selectedPass.find((c) => `${c.suit}-${c.rank}` === key);
+    if (exists) {
+      setSelectedPass((prev) => prev.filter((c) => `${c.suit}-${c.rank}` !== key));
+    } else if (selectedPass.length < 2) {
+      setSelectedPass((prev) => [...prev, card]);
+    }
+  };
+
+  const submitPass = () => {
+    if (selectedPass.length !== 2) return;
+    selectPass(selectedPass);
   };
 
   const handleEndGame = () => {
@@ -41,30 +69,34 @@ export default function GamePage() {
     navigate('/waiting-room');
   };
 
-  if (!gameStarted) return null;
+  if (!gameStarted && !passPending) return null;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center mb-4 bg-gray-800 rounded-lg p-4 shadow-lg">
         <div>
-          <h2 className="text-3xl font-bold text-red-500">♥ Hearts</h2>
+          <h2 className="text-3xl font-bold text-black-500">♥ Scabby Queen</h2>
           <div className="text-sm text-gray-400">Round {round}</div>
         </div>
         <div className="text-right">
-          <div className="text-lg font-semibold">
-            Current turn:{' '}
-            <span className={isMyTurn ? 'text-green-400' : 'text-yellow-400'}>
-              {turn || '—'}
-            </span>
-          </div>
-          {isMyTurn && (
-            <div className="text-xs text-green-400 animate-pulse">Your turn!</div>
+          {passPending ? (
+            <div className="text-lg font-semibold text-orange-300">Pass 2 cards to {passInfo?.target || 'next player'}</div>
+          ) : (
+            <>
+              <div className="text-lg font-semibold">
+                Current turn:{' '}
+                <span className={isMyTurn ? 'text-green-400' : 'text-yellow-400'}>
+                  {turn || '—'}
+                </span>
+              </div>
+              {isMyTurn && (
+                <div className="text-xs text-green-400 animate-pulse">Your turn!</div>
+              )}
+            </>
           )}
         </div>
       </div>
-
-      {/* Game Table */}
       <div
         className="flex-1 rounded-xl shadow-2xl p-8 mb-4 relative overflow-hidden"
         style={{
@@ -74,7 +106,6 @@ export default function GamePage() {
           minHeight: '400px',
         }}
       >
-        {/* Pile in Center */}
         <div className="flex items-center justify-center min-h-[300px]">
           {pile.length === 0 ? (
             <div className="text-white/30 text-2xl font-light">
@@ -103,8 +134,6 @@ export default function GamePage() {
             </div>
           )}
         </div>
-
-        {/* Scores Overlay */}
         <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg p-4 shadow-xl">
           <h3 className="text-lg font-bold mb-2 text-yellow-400">Scores</h3>
           <div className="space-y-1">
@@ -172,13 +201,46 @@ export default function GamePage() {
           </div>
         </Card>
       )}
-
-      {/* Hand */}
       <Card className="bg-gray-800 rounded-xl shadow-xl p-6 border-gray-700">
+        {passPending && (
+          <div className="mb-4 p-4 rounded-lg bg-yellow-900/40 border border-yellow-500 text-yellow-100">
+            <div className="font-semibold mb-1">Select exactly 2 cards to pass</div>
+            <div className="text-sm text-yellow-200">
+              Passing to {passInfo?.target || `player ${passInfo?.distance || ''} to your left`}
+            </div>
+            <div className="mt-2 text-xs text-yellow-200">
+              {passSubmitted ? 'Selection locked in. Waiting for others...' : 'Click cards below to select. Then press Confirm Pass.'}
+            </div>
+            <div className="mt-3 flex gap-2 flex-wrap">
+              {selectedPass.map((c, idx) => (
+                <span key={`${c.suit}-${c.rank}-${idx}`} className="px-2 py-1 bg-yellow-500/30 rounded text-xs border border-yellow-400">
+                  {c.rank} of {c.suit}
+                </span>
+              ))}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button
+                onClick={submitPass}
+                disabled={selectedPass.length !== 2 || passSubmitted || loading}
+                className="bg-yellow-500 text-black hover:bg-yellow-400"
+              >
+                {passSubmitted ? 'Waiting for others...' : 'Confirm Pass'}
+              </Button>
+              <Button
+                onClick={() => setSelectedPass([])}
+                disabled={passSubmitted || loading}
+                variant="outline"
+                className="border-yellow-400 text-yellow-200"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold">
             Your Hand
-            {isMyTurn && (
+            {!passPending && isMyTurn && (
               <span className="ml-2 text-green-400 text-sm">
                 (Click a card to play)
               </span>
@@ -202,25 +264,33 @@ export default function GamePage() {
                   ? JSON.stringify(c)
                   : String(c);
 
+            const isSelected = selectedPass.some((sp) => sp.rank === nc.rank && sp.suit === nc.suit);
+
             return (
               <button
                 key={`${nc.suit}-${nc.rank}-${idx}`}
                 onClick={() =>
-                  handlePlayCard({
-                    rank: nc.rank,
-                    suit: nc.suit,
-                    value: nc.value,
-                  })
+                  passPending
+                    ? togglePassSelection({ rank: nc.rank, suit: nc.suit, value: nc.value })
+                    : handlePlayCard({
+                        rank: nc.rank,
+                        suit: nc.suit,
+                        value: nc.value,
+                      })
                 }
-                disabled={!isMyTurn || loading}
+                disabled={(passPending && passSubmitted) || (!passPending && (!isMyTurn || loading))}
                 className={`
                   rounded-lg overflow-hidden transition-all duration-200 transform
                   ${
-                    isMyTurn
-                      ? 'hover:scale-110 hover:-translate-y-2 hover:shadow-2xl cursor-pointer'
-                      : 'opacity-50 cursor-not-allowed'
+                    passPending
+                      ? 'hover:scale-105 cursor-pointer'
+                      : isMyTurn
+                        ? 'hover:scale-110 hover:-translate-y-2 hover:shadow-2xl cursor-pointer'
+                        : 'opacity-50 cursor-not-allowed'
                   }
-                  ${!isMyTurn && 'grayscale'}
+                  ${passPending ? 'border-4 border-dashed border-yellow-500/60' : ''}
+                  ${isSelected ? 'ring-4 ring-yellow-400' : ''}
+                  ${!passPending && !isMyTurn && 'grayscale'}
                 `}
                 title={`${label} - Value: ${nc.value}`}
               >
@@ -234,8 +304,6 @@ export default function GamePage() {
           })}
         </div>
       </Card>
-
-      {/* Game Over or End Controls */}
       <div className="mt-4 flex justify-center">
         {gameOver && standings ? (
           <Card className="bg-gray-800 rounded-xl shadow-xl p-6 max-w-md w-full border-gray-700">

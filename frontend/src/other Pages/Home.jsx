@@ -31,7 +31,7 @@ export default function Home() {
       <Card className="w-full max-w-md p-8 bg-gray-800 border-gray-700">
         <div className="space-y-6">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-red-500 mb-2">♥ Hearts</h1>
+            <h1 className="text-4xl font-bold text-black-500 mb-2">♥ Scabby Queen</h1>
             <p className="text-gray-400">Join a game with friends</p>
           </div>
 

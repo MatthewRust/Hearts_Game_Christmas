@@ -9,8 +9,12 @@ const server = http.createServer(app);
 const io = new Server(server, { 
   cors: { 
     origin: '*',
-    methods: ['GET', 'POST']
-  }
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  allowEIO3: true,
+  transports: ['websocket', 'polling'],
+  path: '/socket.io/'
 });
 
 console.log('Socket.IO server initialized with CORS: *');
@@ -26,13 +30,15 @@ const connectedPlayers = new Map();
 
 let gameInProgress = false;
 let heartGame = null;
+let passSelections = new Map();
+let awaitingPass = false;
 
 function updateHost() {
-  // Remove isHost from all
+  // gets rid of the host from all the users
   for (const player of connectedPlayers.values()) {
     player.isHost = false;
   }
-  // Assign host to first player (if any)
+  // gives the host duties to the next person
   const first = connectedPlayers.values().next().value;
   if (first) {
     first.isHost = true;
@@ -45,25 +51,102 @@ function broadcastPlayers() {
   io.emit('players:update', Array.from(connectedPlayers.values()));
 }
 
+function emitHands() {
+  if (!heartGame) return;
+  const players = Array.from(connectedPlayers.values());
+  players.forEach((player) => {
+    const hand = heartGame.players[player.name]?.cards || [];
+    io.to(player.id).emit('game:hand', { hand });
+  });
+}
+
+function startPassPhase({ initialStart = false } = {}) {
+  if (!heartGame) return;
+  passSelections = new Map();
+  const distance = heartGame.getPassDistance();
+  awaitingPass = distance > 0;
+  const players = Array.from(connectedPlayers.values());
+
+  // Send current hands so players can choose cards to pass
+  emitHands();
+
+  if (awaitingPass) {
+    players.forEach((player) => {
+      const target = heartGame.getPassTarget(player.name, distance);
+      io.to(player.id).emit('game:passPending', {
+        round: heartGame.round,
+        distance,
+        target,
+      });
+    });
+    if (initialStart) {
+      io.emit('game:started', { players, startedAt: Date.now(), passPending: true });
+    } else {
+      io.emit('game:roundPassPending', { round: heartGame.round, distance });
+    }
+  } else {
+    finalizeRoundStart({ initialStart });
+  }
+}
+
+function finalizeRoundStart({ initialStart = false } = {}) {
+  awaitingPass = false;
+  if (!heartGame) return;
+  heartGame.setInitialLeader(); // recalc after any passes
+  heartGame.sortHands();
+  emitHands();
+  io.emit('game:state', {
+    turn: heartGame.getCurrentPlayer(),
+    pile: heartGame.pile.cards,
+    scores: heartGame.scores,
+    totalScores: heartGame.totalScores,
+    round: heartGame.round,
+  });
+  if (initialStart) {
+    const players = Array.from(connectedPlayers.values());
+    io.emit('game:started', { players, startedAt: Date.now(), passPending: false });
+  } else {
+    io.emit('game:roundStarted', { round: heartGame.round });
+  }
+}
+
+function tryResolvePasses() {
+  if (!awaitingPass || !heartGame) return;
+  if (passSelections.size !== connectedPlayers.size) return; // wait for everyone
+
+  heartGame.applyPasses(Object.fromEntries(passSelections));
+  heartGame.setInitialLeader();
+  heartGame.sortHands();
+  passSelections.clear();
+  awaitingPass = false;
+
+  emitHands();
+  io.emit('game:passComplete', { round: heartGame.round });
+  io.emit('game:state', {
+    turn: heartGame.getCurrentPlayer(),
+    pile: heartGame.pile.cards,
+    scores: heartGame.scores,
+    totalScores: heartGame.totalScores,
+    round: heartGame.round,
+  });
+}
+
 io.on('connection', (socket) => {
   console.log('Player connected:', socket.id);
   console.log('Transport:', socket.conn.transport.name);
 
-  // Handle player disconnection
+  //handles a player disconnecting
   socket.on('disconnect', () => {
     console.log('Player disconnected:', socket.id);
-    // Grab the player info before removing from the map
     const player = connectedPlayers.get(socket.id);
     connectedPlayers.delete(socket.id);
-
-    // Broadcast updated player list
     broadcastPlayers();
 
-    // Inform clients which player left (include id and name if available)
+    //send notification to the users of who left
     if (player) {
       io.emit('player:left', { playerId: player.id, name: player.name });
     } else {
-      // Fallback: emit only id if we didn't have the player record
+      //if we dont know who left we just send out the sockets id
       io.emit('player:left', { playerId: socket.id });
     }
   });
@@ -74,11 +157,11 @@ io.on('connection', (socket) => {
     connectedPlayers.set(socket.id, player);
     broadcastPlayers();
     
-    // Send join confirmation to the new player
+    //emits the success flag to the players  when joining
     socket.emit('join:success', player);
   });
 
-  // Allow any client to request starting the game; server validates conditions
+  //starts the game
 
   socket.on('game:start', () => {
     if (gameInProgress) {
@@ -90,44 +173,35 @@ io.on('connection', (socket) => {
       socket.emit('game:start:error', { message: 'Need at least 2 players to start the game' });
       return;
     }
-    // Start backend game logic
+    //starts the backend stuff up
     const playerNames = Array.from(connectedPlayers.values()).map(p => p.name);
     heartGame = new HeartGame(playerNames);
-  heartGame.setUpDeck();
-  heartGame.dealAllCards();
-  heartGame.setInitialLeader();
+    heartGame.setUpDeck();
+    heartGame.dealAllCards();
+    heartGame.setInitialLeader();
     gameInProgress = true;
-    const players = Array.from(connectedPlayers.values());
-    // Send initial hands and game state to each player
-    players.forEach((player) => {
-      const hand = heartGame.players[player.name]?.cards || [];
-      io.to(player.id).emit('game:hand', { hand });
-    });
-    io.emit('game:state', {
-      turn: heartGame.getCurrentPlayer(),
-      pile: heartGame.pile.cards,
-      scores: heartGame.scores,
-      totalScores: heartGame.totalScores,
-      round: heartGame.round,
-    });
-    io.emit('game:started', { players, startedAt: Date.now() });
+    startPassPhase({ initialStart: true });
   });
 
 
-  // Player plays a card
+  //a player plays a card down
   socket.on('game:playCard', ({ playerName, card }) => {
     if (!gameInProgress || !heartGame) {
       socket.emit('game:play:error', { message: 'No game in progress' });
       return;
     }
+    if (awaitingPass) {
+      socket.emit('game:play:error', { message: 'Complete passing before playing' });
+      return;
+    }
     try {
       heartGame.playCard(playerName, card);
-      // Update all hands (send only to each player)
+      //updates all the hands
       for (const [id, player] of connectedPlayers.entries()) {
         const hand = heartGame.players[player.name]?.cards || [];
         io.to(id).emit('game:hand', { hand });
       }
-      // Broadcast updated game state
+      //sends out the new game state to all the playes
       io.emit('game:state', {
         turn: heartGame.getCurrentPlayer(),
         pile: heartGame.pile.cards,
@@ -135,32 +209,20 @@ io.on('connection', (socket) => {
         totalScores: heartGame.totalScores,
         round: heartGame.round,
       });
-      // If trick resolved, broadcast winner and reset pile
+      //if a trick is finished then reslove it 
       if (heartGame.pile.cards.length === 0) {
         io.emit('game:trickResolved', {
           scores: heartGame.scores,
           turn: heartGame.getCurrentPlayer(),
         });
-        // If round is over, broadcast round end
-
+        //if a round is over send that out
         if (heartGame.isRoundOver()) {
           const roundSummary = heartGame.finishRound();
           io.emit('game:roundEnd', roundSummary);
 
           if (heartGame.hasMoreRounds()) {
             heartGame.startNewRound();
-            const players = Array.from(connectedPlayers.values());
-            players.forEach((player) => {
-              const hand = heartGame.players[player.name]?.cards || [];
-              io.to(player.id).emit('game:hand', { hand });
-            });
-            io.emit('game:state', {
-              turn: heartGame.getCurrentPlayer(),
-              pile: heartGame.pile.cards,
-              scores: heartGame.scores,
-              totalScores: heartGame.totalScores,
-              round: heartGame.round,
-            });
+            startPassPhase({ initialStart: false });
           } else {
             io.emit('game:over', { standings: roundSummary.standings, endedAt: Date.now(), totalScores: heartGame.totalScores });
             gameInProgress = false;
@@ -172,18 +234,70 @@ io.on('connection', (socket) => {
       socket.emit('game:play:error', { message: err.message });
     }
   });
-
-  // Allow ending the current game and resetting server-side game state
+  //end game stuff
   socket.on('game:end', () => {
     if (!gameInProgress) {
       socket.emit('game:end:error', { message: 'No game in progress' });
       return;
     }
-    // Reset game state on server
+    //restest the game severs
     gameInProgress = false;
     heartGame = null;
-    // Broadcast to all clients that the game has ended and server is reset
+    passSelections.clear();
+    awaitingPass = false;
+    //sends out that the game has been ended
     io.emit('game:ended', { message: 'Game ended by request', resetAt: Date.now() });
+  });
+
+  socket.on('game:selectPass', ({ playerName, cards }) => {
+    if (!gameInProgress || !heartGame) {
+      socket.emit('game:pass:error', { message: 'No game in progress' });
+      return;
+    }
+    if (!awaitingPass) {
+      socket.emit('game:pass:error', { message: 'No passing required this round' });
+      return;
+    }
+    if (!Array.isArray(cards) || cards.length !== 2) {
+      socket.emit('game:pass:error', { message: 'Select exactly 2 cards to pass' });
+      return;
+    }
+    const hand = heartGame.players[playerName];
+    if (!hand) {
+      socket.emit('game:pass:error', { message: 'Unknown player' });
+      return;
+    }
+
+    // allow re-selection: return previous cards to hand
+    const previous = passSelections.get(playerName);
+    if (previous) {
+      previous.forEach((c) => hand.addCard(c));
+    }
+
+    const chosen = [];
+    const seen = new Set();
+    for (const c of cards) {
+      const key = `${c.suit}-${c.rank}`;
+      if (seen.has(key)) {
+        socket.emit('game:pass:error', { message: 'Cards must be unique' });
+        return;
+      }
+      seen.add(key);
+      const match = hand.cards.find(card => card.suit === c.suit && card.rank === c.rank);
+      if (!match) {
+        socket.emit('game:pass:error', { message: 'Card not in hand' });
+        return;
+      }
+      chosen.push(match);
+    }
+
+    // remove chosen cards from hand
+    chosen.forEach((c) => hand.removeCard(c));
+    passSelections.set(playerName, chosen);
+    heartGame.sortHands();
+
+    socket.emit('game:passAccepted', { round: heartGame.round, hand: hand.cards });
+    tryResolvePasses();
   });
 });
 

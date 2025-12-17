@@ -8,6 +8,10 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  server: {
+    // Allow access when the site is served via this ngrok domain
+    allowedHosts: ['untaxing-adina-peakless.ngrok-free.dev'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

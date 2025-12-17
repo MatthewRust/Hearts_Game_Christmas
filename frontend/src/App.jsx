@@ -7,6 +7,7 @@ import Layout from './layout/Layout';
 import Home from './other Pages/Home';
 import WaitingRoom from './other Pages/WaitingRoom';
 import GamePage from './Hearts Pages/GamePage';
+import SpitGame from './Spit Game/SpitGame';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/waiting-room" element={<WaitingRoom />} />
               <Route path="/game" element={<GamePage />} />
+              <Route path="/spit" element={<SpitGame />} />
             </Routes>
           </Layout>
         </Router>
