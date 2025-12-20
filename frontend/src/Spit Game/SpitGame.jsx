@@ -122,7 +122,7 @@ export default function SpitGame() {
           {/* Opponent Info */}
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
             <h3 className="text-white font-bold mb-2">{opponent.name}</h3>
-            <div className="grid grid-cols-5 gap-2 mb-4">
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4 sm:gap-1">
               {opponent.spitPiles.map((pile, idx) => (
                 <div
                   key={`opponent-pile-${idx}`}
@@ -157,11 +157,11 @@ export default function SpitGame() {
           </div>
 
           {/* Center Piles */}
-          <div className="bg-gradient-to-b from-green-700 to-green-800 border-4 border-yellow-600 rounded-lg p-8">
-            <h2 className="text-white text-center text-lg font-bold mb-6">
-              Center Piles {selectedPile !== null && <span className="text-yellow-300">(Click to play)</span>}
+          <div className="bg-gradient-to-b from-green-700 to-green-800 border-4 border-yellow-600 rounded-lg p-4 md:p-8">
+            <h2 className="text-white text-center text-base md:text-lg font-bold mb-4 md:mb-6">
+              Center Piles {selectedPile !== null && <span className="text-yellow-300 text-sm md:text-base">(Click to play)</span>}
             </h2>
-            <div className="flex justify-center gap-12">
+            <div className="flex justify-center gap-4 md:gap-12">
               {gameState.centerPiles.map((pileData, idx) => {
                 const card = pileData?.topCard || pileData;
                 const length = pileData?.length || 0;
@@ -177,10 +177,10 @@ export default function SpitGame() {
                       <img
                         src={cardImageUrl(card)}
                         alt="center card"
-                        className="w-24 h-32 rounded shadow-lg"
+                        className="w-16 h-20 sm:w-20 sm:h-28 md:w-24 md:h-32 rounded shadow-lg"
                       />
                     ) : (
-                      <div className="w-24 h-32 bg-gray-500 rounded shadow-lg flex items-center justify-center">
+                      <div className="w-16 h-20 sm:w-20 sm:h-28 md:w-24 md:h-32 bg-gray-500 rounded shadow-lg flex items-center justify-center">
                         <span className="text-gray-800 text-sm font-bold">Empty</span>
                       </div>
                     )}
@@ -231,11 +231,11 @@ export default function SpitGame() {
               <p className="text-gray-300 text-sm mb-3">
                 Your Piles: {selectedPile !== null && <span className="text-yellow-300">Selected Pile {selectedPile + 1} - Click a center pile to play</span>}
               </p>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
                 {currentPlayer.spitPiles.map((pile, idx) => (
                   <div
                     key={`my-pile-${idx}`}
-                    className={`bg-gray-900 border-2 rounded p-3 text-center cursor-pointer transition-all ${
+                    className={`bg-gray-900 border-2 rounded p-1 sm:p-2 md:p-3 text-center cursor-pointer transition-all ${
                       selectedPile === idx
                         ? 'border-yellow-400 shadow-lg shadow-yellow-400 scale-105'
                         : 'border-gray-600 hover:border-gray-500'
@@ -251,10 +251,10 @@ export default function SpitGame() {
                       <img
                         src={cardImageUrl(pile.topCard)}
                         alt="card"
-                        className="w-16 h-20 mx-auto rounded"
+                        className="w-10 h-14 sm:w-12 sm:h-16 md:w-16 md:h-20 mx-auto rounded"
                       />
                     ) : (
-                      <div className="w-16 h-20 mx-auto bg-gray-700 rounded flex items-center justify-center">
+                      <div className="w-10 h-14 sm:w-12 sm:h-16 md:w-16 md:h-20 mx-auto bg-gray-700 rounded flex items-center justify-center">
                         <span className="text-xs text-gray-500">Empty</span>
                       </div>
                     )}
