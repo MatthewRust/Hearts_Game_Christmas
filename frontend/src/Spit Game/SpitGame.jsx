@@ -73,12 +73,12 @@ export default function SpitGame() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 to-green-800 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-900 to-green-800 p-2 md:p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-white">
-            <h1 className="text-4xl font-bold text-yellow-300">Spit</h1>
-            <p className="text-sm text-gray-300">{playerName}</p>
+        <div className="flex justify-between items-center mb-3 md:mb-6 flex-col md:flex-row gap-2">
+          <div className="text-white text-center md:text-left">
+            <h1 className="text-3xl md:text-4xl font-bold text-yellow-300">Spit</h1>
+            <p className="text-xs md:text-sm text-gray-300">{playerName}</p>
             <p className="text-xs text-gray-400">Round {currentRound}</p>
           </div>
           {gameOver && (
@@ -120,22 +120,22 @@ export default function SpitGame() {
         {/* Game Board */}
         <div className="space-y-6">
           {/* Opponent Info */}
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <h3 className="text-white font-bold mb-2">{opponent.name}</h3>
-            <div className="grid grid-cols-5 gap-2 mb-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 md:p-4">
+            <h3 className="text-white font-bold text-sm md:text-base mb-2">{opponent.name}</h3>
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-1 md:gap-2 mb-4">
               {opponent.spitPiles.map((pile, idx) => (
                 <div
                   key={`opponent-pile-${idx}`}
-                  className="bg-gray-900 border border-gray-600 rounded p-3 text-center"
+                  className="bg-gray-900 border border-gray-600 rounded p-1 md:p-3 text-center"
                 >
                   {pile.topCard ? (
                     <img
                       src={cardImageUrl(pile.topCard)}
                       alt="card"
-                      className="w-12 h-16 mx-auto rounded"
+                      className="w-10 md:w-12 h-14 md:h-16 mx-auto rounded"
                     />
                   ) : (
-                    <div className="w-12 h-16 mx-auto bg-gray-700 rounded flex items-center justify-center">
+                    <div className="w-10 md:w-12 h-14 md:h-16 mx-auto bg-gray-700 rounded flex items-center justify-center">
                       <span className="text-xs text-gray-500">Empty</span>
                     </div>
                   )}
@@ -157,11 +157,11 @@ export default function SpitGame() {
           </div>
 
           {/* Center Piles */}
-          <div className="bg-gradient-to-b from-green-700 to-green-800 border-4 border-yellow-600 rounded-lg p-8">
-            <h2 className="text-white text-center text-lg font-bold mb-6">
+          <div className="bg-gradient-to-b from-green-700 to-green-800 border-4 border-yellow-600 rounded-lg p-4 md:p-8">
+            <h2 className="text-white text-center text-base md:text-lg font-bold mb-4 md:mb-6">
               Center Piles {selectedPile !== null && <span className="text-yellow-300">(Click to play)</span>}
             </h2>
-            <div className="flex justify-center gap-12">
+            <div className="flex justify-center gap-6 md:gap-12">
               {gameState.centerPiles.map((pileData, idx) => {
                 const card = pileData?.topCard || pileData;
                 const length = pileData?.length || 0;
@@ -177,10 +177,10 @@ export default function SpitGame() {
                       <img
                         src={cardImageUrl(card)}
                         alt="center card"
-                        className="w-24 h-32 rounded shadow-lg"
+                        className="w-16 md:w-24 h-20 md:h-32 rounded shadow-lg"
                       />
                     ) : (
-                      <div className="w-24 h-32 bg-gray-500 rounded shadow-lg flex items-center justify-center">
+                      <div className="w-16 md:w-24 h-20 md:h-32 bg-gray-500 rounded shadow-lg flex items-center justify-center">
                         <span className="text-gray-800 text-sm font-bold">Empty</span>
                       </div>
                     )}
@@ -228,14 +228,14 @@ export default function SpitGame() {
 
             {/* Player's Spit Piles */}
             <div className="mt-4">
-              <p className="text-gray-300 text-sm mb-3">
-                Your Piles: {selectedPile !== null && <span className="text-yellow-300">Selected Pile {selectedPile + 1} - Click a center pile to play</span>}
+              <p className="text-gray-300 text-xs md:text-sm mb-3">
+                Your Piles: {selectedPile !== null && <span className="text-yellow-300 text-xs md:text-sm">Selected Pile {selectedPile + 1} - Click center pile</span>}
               </p>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
                 {currentPlayer.spitPiles.map((pile, idx) => (
                   <div
                     key={`my-pile-${idx}`}
-                    className={`bg-gray-900 border-2 rounded p-3 text-center cursor-pointer transition-all ${
+                    className={`bg-gray-900 border-2 rounded p-2 md:p-3 text-center cursor-pointer transition-all ${
                       selectedPile === idx
                         ? 'border-yellow-400 shadow-lg shadow-yellow-400 scale-105'
                         : 'border-gray-600 hover:border-gray-500'
@@ -246,19 +246,19 @@ export default function SpitGame() {
                     }`}
                     onClick={() => pile.topCard && !waitingForOpponentSpit && setSelectedPile(selectedPile === idx ? null : idx)}
                   >
-                    <div className="text-white text-xs mb-2">Pile {idx + 1}</div>
+                    <div className="text-white text-xs mb-1 md:mb-2">Pile {idx + 1}</div>
                     {pile.topCard ? (
                       <img
                         src={cardImageUrl(pile.topCard)}
                         alt="card"
-                        className="w-16 h-20 mx-auto rounded"
+                        className="w-12 md:w-16 h-16 md:h-20 mx-auto rounded"
                       />
                     ) : (
-                      <div className="w-16 h-20 mx-auto bg-gray-700 rounded flex items-center justify-center">
+                      <div className="w-12 md:w-16 h-16 md:h-20 mx-auto bg-gray-700 rounded flex items-center justify-center">
                         <span className="text-xs text-gray-500">Empty</span>
                       </div>
                     )}
-                    <div className="text-gray-400 text-xs mt-2">
+                    <div className="text-gray-400 text-xs mt-1 md:mt-2">
                       {pile.totalCards} cards
                     </div>
                   </div>
