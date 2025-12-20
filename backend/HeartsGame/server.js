@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import sqlite3 from 'sqlite3';
 import HeartGame from './heartGame.js';
+import { initSpitServer } from '../SpitGame/server.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -312,6 +313,9 @@ io.on('connection', (socket) => {
     tryResolvePasses();
   });
 });
+
+// Initialize Spit game handlers
+initSpitServer(io);
 
 app.get('/', (req, res) => {
   res.send('Hearts backend running');
