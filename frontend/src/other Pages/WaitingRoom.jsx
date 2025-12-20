@@ -68,7 +68,7 @@ export default function WaitingRoom() {
                 </Button>
                 <Button
                   onClick={() => navigate('/spit')}
-                  disabled={players.length !== 2}
+                  disabled={!isHost || players.length !== 2}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
                   size="lg"
                 >
@@ -83,16 +83,7 @@ export default function WaitingRoom() {
               <p className="text-gray-400 text-center">
                 Waiting for <span className="font-semibold">{players.find((p) => p.isHost)?.name || 'host'}</span> to start the game...
               </p>
-              <div className="grid grid-cols-1 gap-3">
-                <Button
-                  onClick={() => navigate('/spit')}
-                  disabled={players.length !== 2}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                  size="lg"
-                >
-                  Start Spit (2 players)
-                </Button>
-              </div>
+              <p className="text-gray-500 text-center text-sm">Only the host can start Spit, and exactly 2 players are required.</p>
             </div>
           )}
         </Card>

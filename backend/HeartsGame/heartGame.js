@@ -116,7 +116,8 @@ class HeartGame {
   }
 
   // Player attempts to play a card
-  playCard(playerName, card) {
+  // When deferResolve is true, caller handles resolving a full pile (e.g., to delay for UI)
+  playCard(playerName, card, { deferResolve = false } = {}) {
     if (this.getCurrentPlayer() !== playerName) {
       throw new Error("Not this player's turn");
     }
@@ -139,10 +140,15 @@ class HeartGame {
     }
     // If pile is full, resolve trick
     if (this.pile.cards.length === this.turnOrder.length) {
+      if (deferResolve) {
+        return { trickComplete: true, resolved: false };
+      }
       this.resolveTrick();
-    } else {
-      this.nextTurn();
+      return { trickComplete: true, resolved: true };
     }
+
+    this.nextTurn();
+    return { trickComplete: false, resolved: false };
   }
 
   // Resolve the trick, assign points, and set up for next trick
@@ -156,6 +162,7 @@ class HeartGame {
     }
     // Reset pile for next trick
     this.pile = new Pile();
+    return { winner, points };
   }
 
   // Check if round is over (all hands empty)

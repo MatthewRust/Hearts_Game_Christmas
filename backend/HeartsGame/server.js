@@ -195,13 +195,13 @@ io.on('connection', (socket) => {
       return;
     }
     try {
-      heartGame.playCard(playerName, card);
+      const result = heartGame.playCard(playerName, card, { deferResolve: true });
       //updates all the hands
       for (const [id, player] of connectedPlayers.entries()) {
         const hand = heartGame.players[player.name]?.cards || [];
         io.to(id).emit('game:hand', { hand });
       }
-      //sends out the new game state to all the playes
+      //sends out the new game state to all the playes (pile still visible if trick just completed)
       io.emit('game:state', {
         turn: heartGame.getCurrentPlayer(),
         pile: heartGame.pile.cards,
@@ -209,26 +209,38 @@ io.on('connection', (socket) => {
         totalScores: heartGame.totalScores,
         round: heartGame.round,
       });
-      //if a trick is finished then reslove it 
-      if (heartGame.pile.cards.length === 0) {
-        io.emit('game:trickResolved', {
-          scores: heartGame.scores,
-          turn: heartGame.getCurrentPlayer(),
-        });
-        //if a round is over send that out
-        if (heartGame.isRoundOver()) {
-          const roundSummary = heartGame.finishRound();
-          io.emit('game:roundEnd', roundSummary);
 
-          if (heartGame.hasMoreRounds()) {
-            heartGame.startNewRound();
-            startPassPhase({ initialStart: false });
+      if (result.trickComplete) {
+        setTimeout(() => {
+          heartGame.resolveTrick();
+          io.emit('game:trickResolved', {
+            scores: heartGame.scores,
+            turn: heartGame.getCurrentPlayer(),
+          });
+
+          if (heartGame.isRoundOver()) {
+            const roundSummary = heartGame.finishRound();
+            io.emit('game:roundEnd', roundSummary);
+
+            if (heartGame.hasMoreRounds()) {
+              heartGame.startNewRound();
+              startPassPhase({ initialStart: false });
+            } else {
+              io.emit('game:over', { standings: roundSummary.standings, endedAt: Date.now(), totalScores: heartGame.totalScores });
+              gameInProgress = false;
+              heartGame = null;
+            }
           } else {
-            io.emit('game:over', { standings: roundSummary.standings, endedAt: Date.now(), totalScores: heartGame.totalScores });
-            gameInProgress = false;
-            heartGame = null;
+            // send fresh state for next trick (now with cleared pile)
+            io.emit('game:state', {
+              turn: heartGame.getCurrentPlayer(),
+              pile: heartGame.pile.cards,
+              scores: heartGame.scores,
+              totalScores: heartGame.totalScores,
+              round: heartGame.round,
+            });
           }
-        }
+        }, 1200); // 1.2s delay to let players see the last card
       }
     } catch (err) {
       socket.emit('game:play:error', { message: err.message });
@@ -305,7 +317,8 @@ app.get('/', (req, res) => {
   res.send('Hearts backend running');
 });
 
-server.listen(3001, '0.0.0.0', () => {
-  console.log('Backend listening on 0.0.0.0:3001');
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend listening on 0.0.0.0:${PORT}`);
   console.log('Socket.IO ready for connections');
 });
