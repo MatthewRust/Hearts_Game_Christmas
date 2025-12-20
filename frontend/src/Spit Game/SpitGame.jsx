@@ -184,7 +184,7 @@ export default function SpitGame() {
                         <span className="text-gray-800 text-sm font-bold">Empty</span>
                       </div>
                     )}
-                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white text-sm font-bold">
+                    <div className="absolute -bottom-8 md:-bottom-6 left-1/2 transform -translate-x-1/2 text-white text-xs md:text-sm font-bold whitespace-nowrap">
                       Pile {idx + 1}
                     </div>
                   </div>
@@ -231,7 +231,7 @@ export default function SpitGame() {
               <p className="text-gray-300 text-xs md:text-sm mb-3">
                 Your Piles: {selectedPile !== null && <span className="text-yellow-300 text-xs md:text-sm">Selected Pile {selectedPile + 1} - Click center pile</span>}
               </p>
-              <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
+              <div className="flex flex-wrap justify-center gap-2 md:flex-nowrap md:grid md:grid-cols-5 md:justify-start md:gap-3">
                 {currentPlayer.spitPiles.map((pile, idx) => (
                   <div
                     key={`my-pile-${idx}`}
