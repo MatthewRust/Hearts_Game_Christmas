@@ -103,8 +103,8 @@ class SpitGame {
       }
     }
 
-    // Calculate total hand size
-    player.handSize = 26;
+    // Calculate total hand size based on actual cards
+    player.handSize = cards.length;
   }
 
   /**
@@ -311,32 +311,42 @@ class SpitGame {
     const smallerPile = pile1Size <= pile2Size ? this.centerPiles[0] : this.centerPiles[1];
     const largerPile = pile1Size <= pile2Size ? this.centerPiles[1] : this.centerPiles[0];
 
-    // Give smaller pile to eliminated player
-    const eliminatedPlayerObj = this.players[eliminatedPlayer];
-    smallerPile.forEach(card => {
-      eliminatedPlayerObj.spitPiles[0].push(card);
-      eliminatedPlayerObj.handSize++;
-    });
+    // Build next-round decks per player: winner (eliminated) gets smaller pile, opponent gets larger
+    const eliminatedObj = this.players[eliminatedPlayer];
+    const otherObj = this.players[otherPlayer];
 
-    console.log(`Round ${this.round}: ${eliminatedPlayer} eliminated, given ${smallerPile.length} cards from smaller center pile`);
+    const eliminatedNextDeck = [];
+    const otherNextDeck = [];
 
-    // Collect all cards from both players and larger center pile
-    const allCards = [];
-    p1.spitPiles.forEach(pile => pile.forEach(card => allCards.push(card)));
-    p1.stockPile.forEach(card => allCards.push(card));
-    p2.spitPiles.forEach(pile => pile.forEach(card => allCards.push(card)));
-    p2.stockPile.forEach(card => allCards.push(card));
-    largerPile.forEach(card => allCards.push(card));
+    // Add current holdings
+    eliminatedObj.spitPiles.forEach(pile => pile.forEach(card => eliminatedNextDeck.push(card)));
+    eliminatedObj.stockPile.forEach(card => eliminatedNextDeck.push(card));
+    otherObj.spitPiles.forEach(pile => pile.forEach(card => otherNextDeck.push(card)));
+    otherObj.stockPile.forEach(card => otherNextDeck.push(card));
 
-    // Check if game is over (one player has no cards)
-    if (allCards.length === 0) {
+    // Add center piles accordingly
+    smallerPile.forEach(card => eliminatedNextDeck.push(card));
+    largerPile.forEach(card => otherNextDeck.push(card));
+
+    console.log(`Round ${this.round}: ${eliminatedPlayer} eliminated. Next decks => ${eliminatedPlayer}: ${eliminatedNextDeck.length}, ${otherPlayer}: ${otherNextDeck.length}`);
+
+    // Check if game is over: if one player has 0 cards for next round
+    if (eliminatedNextDeck.length === 0 || otherNextDeck.length === 0) {
       this.gameOver = true;
-      this.winner = otherPlayer;
+      this.winner = eliminatedNextDeck.length === 0 ? otherPlayer : eliminatedPlayer;
       return { gameOver: true, winner: this.winner };
     }
 
-    // Shuffle all cards
-    const shuffled = allCards.sort(() => Math.random() - 0.5);
+    // Shuffle decks independently
+    const shuffleInPlace = (arr) => {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+    shuffleInPlace(eliminatedNextDeck);
+    shuffleInPlace(otherNextDeck);
 
     // Reset for new round
     this.round++;
@@ -353,13 +363,9 @@ class SpitGame {
     p2.stockPile = [];
     p2.handSize = 0;
 
-    // Deal shuffled cards: first player gets cards up to their max, second gets remainder
-    const cardsPerPlayer = Math.floor(shuffled.length / 2);
-    const p1Cards = shuffled.slice(0, cardsPerPlayer);
-    const p2Cards = shuffled.slice(cardsPerPlayer);
-
-    this.dealPlayerCards(this.player1Name, p1Cards);
-    this.dealPlayerCards(this.player2Name, p2Cards);
+    // Deal next-round decks according to uneven sizes
+    this.dealPlayerCards(eliminatedPlayer, eliminatedNextDeck);
+    this.dealPlayerCards(otherPlayer, otherNextDeck);
 
     // Initialize new center piles
     const p1TopStock = this.players[this.player1Name].stockPile.pop();

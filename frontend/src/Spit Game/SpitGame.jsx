@@ -187,9 +187,6 @@ export default function SpitGame() {
                     <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white text-sm font-bold">
                       Pile {idx + 1}
                     </div>
-                    <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 text-yellow-300 text-xs">
-                      ({length} cards)
-                    </div>
                   </div>
                 );
               })}
