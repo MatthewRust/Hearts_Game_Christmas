@@ -27,6 +27,8 @@ class SpitGame {
     this.deck = new Deck();
     this.gameOver = false;
     this.winner = null;
+    this.round = 1;
+    this.roundOver = false;
     this.rankOrder = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King'];
   }
 
@@ -62,8 +64,14 @@ class SpitGame {
     const p1TopStock = this.players[this.player1Name].stockPile.pop();
     const p2TopStock = this.players[this.player2Name].stockPile.pop();
 
-    if (p1TopStock) this.centerPiles[0].push(p1TopStock);
-    if (p2TopStock) this.centerPiles[1].push(p2TopStock);
+    if (p1TopStock) {
+      this.centerPiles[0].push(p1TopStock);
+      this.players[this.player1Name].handSize--;
+    }
+    if (p2TopStock) {
+      this.centerPiles[1].push(p2TopStock);
+      this.players[this.player2Name].handSize--;
+    }
   }
 
   /**
@@ -102,6 +110,7 @@ class SpitGame {
   /**
    * Check if a card can be played on a center pile
    * Card must be same rank, 1 rank higher, or 1 rank lower than the top card
+   * Wraps around: King can play on Ace, Ace can play on King
    */
   isLegalPlay(card, centerPileIndex) {
     if (centerPileIndex < 0 || centerPileIndex >= this.centerPiles.length) {
@@ -130,10 +139,12 @@ class SpitGame {
       return false;
     }
 
-    // Valid if same rank, 1 higher, or 1 lower
+    // Valid if same rank, 1 rank apart, or King-Ace wrap (diff of 12)
     const diff = Math.abs(cardRank - topRank);
     console.log(`Rank difference: ${diff}`);
-    return diff === 0 || diff === 1;
+    
+    // Allow: same rank (0), adjacent ranks (1), or King-Ace wrap (12)
+    return diff === 0 || diff === 1 || diff === this.rankOrder.length - 1;
   }
 
   /**
@@ -189,10 +200,10 @@ class SpitGame {
     // Check if we need to flip a card
     this.flipNextCard(playerName, spitPileIndex);
 
-    // Check win condition
-    this.checkWinCondition();
+    // Check if round is over
+    const roundEnd = this.checkRoundEnd();
 
-    return { success: true, winner: this.winner };
+    return { success: true, roundEnd, winner: this.winner };
   }
 
   /**
@@ -263,23 +274,115 @@ class SpitGame {
   }
 
   /**
-   * Check win condition: first player to have 0 cards wins
+   * Check if a round is over: first player to have all spit piles empty wins the round
    */
-  checkWinCondition() {
+  checkRoundEnd() {
     const p1 = this.players[this.player1Name];
     const p2 = this.players[this.player2Name];
 
-    if (p1.handSize === 0) {
-      this.gameOver = true;
-      this.winner = this.player1Name;
-      return;
+    // Check if player 1 has all spit piles empty
+    const p1Empty = p1.spitPiles.every(pile => pile.length === 0);
+    if (p1Empty) {
+      this.roundOver = true;
+      return { eliminated: this.player1Name };
     }
 
-    if (p2.handSize === 0) {
-      this.gameOver = true;
-      this.winner = this.player2Name;
-      return;
+    // Check if player 2 has all spit piles empty
+    const p2Empty = p2.spitPiles.every(pile => pile.length === 0);
+    if (p2Empty) {
+      this.roundOver = true;
+      return { eliminated: this.player2Name };
     }
+
+    return null;
+  }
+
+  /**
+   * Handle end of round: give smaller center pile to eliminated player, reshuffle, redeal for next round
+   */
+  endRound(eliminatedPlayer) {
+    const p1 = this.players[this.player1Name];
+    const p2 = this.players[this.player2Name];
+    const otherPlayer = eliminatedPlayer === this.player1Name ? this.player2Name : this.player1Name;
+
+    // Determine which center pile is smaller
+    const pile1Size = this.centerPiles[0].length;
+    const pile2Size = this.centerPiles[1].length;
+    const smallerPile = pile1Size <= pile2Size ? this.centerPiles[0] : this.centerPiles[1];
+    const largerPile = pile1Size <= pile2Size ? this.centerPiles[1] : this.centerPiles[0];
+
+    // Give smaller pile to eliminated player
+    const eliminatedPlayerObj = this.players[eliminatedPlayer];
+    smallerPile.forEach(card => {
+      eliminatedPlayerObj.spitPiles[0].push(card);
+      eliminatedPlayerObj.handSize++;
+    });
+
+    console.log(`Round ${this.round}: ${eliminatedPlayer} eliminated, given ${smallerPile.length} cards from smaller center pile`);
+
+    // Collect all cards from both players and larger center pile
+    const allCards = [];
+    p1.spitPiles.forEach(pile => pile.forEach(card => allCards.push(card)));
+    p1.stockPile.forEach(card => allCards.push(card));
+    p2.spitPiles.forEach(pile => pile.forEach(card => allCards.push(card)));
+    p2.stockPile.forEach(card => allCards.push(card));
+    largerPile.forEach(card => allCards.push(card));
+
+    // Check if game is over (one player has no cards)
+    if (allCards.length === 0) {
+      this.gameOver = true;
+      this.winner = otherPlayer;
+      return { gameOver: true, winner: this.winner };
+    }
+
+    // Shuffle all cards
+    const shuffled = allCards.sort(() => Math.random() - 0.5);
+
+    // Reset for new round
+    this.round++;
+    this.roundOver = false;
+    this.centerPiles = [[], []];
+
+    // Reset player hands
+    p1.spitPiles = [[], [], [], [], []];
+    p1.spitPilesFaceUp = [false, false, false, false, false];
+    p1.stockPile = [];
+    p1.handSize = 0;
+    p2.spitPiles = [[], [], [], [], []];
+    p2.spitPilesFaceUp = [false, false, false, false, false];
+    p2.stockPile = [];
+    p2.handSize = 0;
+
+    // Deal shuffled cards: first player gets cards up to their max, second gets remainder
+    const cardsPerPlayer = Math.floor(shuffled.length / 2);
+    const p1Cards = shuffled.slice(0, cardsPerPlayer);
+    const p2Cards = shuffled.slice(cardsPerPlayer);
+
+    this.dealPlayerCards(this.player1Name, p1Cards);
+    this.dealPlayerCards(this.player2Name, p2Cards);
+
+    // Initialize new center piles
+    const p1TopStock = this.players[this.player1Name].stockPile.pop();
+    const p2TopStock = this.players[this.player2Name].stockPile.pop();
+
+    if (p1TopStock) {
+      this.centerPiles[0].push(p1TopStock);
+      this.players[this.player1Name].handSize--;
+    }
+    if (p2TopStock) {
+      this.centerPiles[1].push(p2TopStock);
+      this.players[this.player2Name].handSize--;
+    }
+
+    return { gameOver: false, newRound: this.round };
+  }
+
+  /**
+   * Check win condition (kept for compatibility, now only used after game over)
+   */
+  checkWinCondition() {
+    // Game over is now determined by endRound when all cards are gone
+    return false;
   }
 
   /**
@@ -303,11 +406,18 @@ class SpitGame {
         totalCards: p2.handSize,
       },
       centerPiles: [
-        this.getTopCard(this.centerPiles[0]),
-        this.getTopCard(this.centerPiles[1]),
+        {
+          topCard: this.getTopCard(this.centerPiles[0]),
+          length: this.centerPiles[0].length,
+        },
+        {
+          topCard: this.getTopCard(this.centerPiles[1]),
+          length: this.centerPiles[1].length,
+        },
       ],
       gameOver: this.gameOver,
       winner: this.winner,
+      round: this.round,
     };
   }
 
@@ -330,6 +440,10 @@ class SpitGame {
     // Place p1's card on first center pile, p2's card on second center pile
     this.centerPiles[0].push(p1Card);
     this.centerPiles[1].push(p2Card);
+
+    // Decrement total hand sizes for each player
+    p1.handSize--;
+    p2.handSize--;
 
     console.log(`Spit executed: ${p1Card.rank} of ${p1Card.suit} and ${p2Card.rank} of ${p2Card.suit} dealt to center`);
   }

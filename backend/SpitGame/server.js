@@ -92,14 +92,26 @@ export function initSpitServer(io) {
         // Broadcast updated game state to all players
         broadcastGameState();
 
-        // Check for win
-        if (spitGame.gameOver) {
-          spit.emit('spit:gameOver', {
-            winner: spitGame.winner,
-            endedAt: Date.now(),
-          });
-          gameInProgress = false;
-          spitGame = null;
+        // Check if round ended
+        if (result.roundEnd) {
+          const roundEndResult = spitGame.endRound(result.roundEnd.eliminated);
+
+          if (roundEndResult.gameOver) {
+            // Game is over
+            spit.emit('spit:gameOver', {
+              winner: roundEndResult.winner,
+              endedAt: Date.now(),
+            });
+            gameInProgress = false;
+            spitGame = null;
+          } else {
+            // New round starting
+            spit.emit('spit:roundEnd', {
+              eliminated: result.roundEnd.eliminated,
+              newRound: roundEndResult.newRound,
+            });
+            broadcastGameState();
+          }
         }
       } catch (err) {
         socket.emit('spit:playError', { message: err.message });
@@ -141,7 +153,7 @@ export function initSpitServer(io) {
             spitGame.winner = spitGame.player2Name;
           }
 
-          // Broadcast updated state
+          // Broadcast updated game state
           broadcastGameState();
 
           if (spitGame.gameOver) {

@@ -21,6 +21,7 @@ export default function SpitGame() {
     requestSpit,
     endGame,
     waitingForOpponentSpit,
+    currentRound,
   } = useSpitGame();
 
   const [selectedPile, setSelectedPile] = useState(null);
@@ -78,6 +79,7 @@ export default function SpitGame() {
           <div className="text-white">
             <h1 className="text-4xl font-bold text-yellow-300">Spit</h1>
             <p className="text-sm text-gray-300">{playerName}</p>
+            <p className="text-xs text-gray-400">Round {currentRound}</p>
           </div>
           {gameOver && (
             <div className="text-center">
@@ -140,9 +142,17 @@ export default function SpitGame() {
                 </div>
               ))}
             </div>
-            <div className="flex gap-4 text-sm text-gray-400">
-              <span>Stock: {opponent.stockPileCount} cards</span>
-              <span>Total: {opponent.totalCards} cards</span>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <img
+                  src={cardImageUrl(null)}
+                  alt="opponent stock"
+                  className="w-12 h-16 rounded"
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-yellow-300 font-bold">
+                  {opponent.stockPileCount}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -152,30 +162,37 @@ export default function SpitGame() {
               Center Piles {selectedPile !== null && <span className="text-yellow-300">(Click to play)</span>}
             </h2>
             <div className="flex justify-center gap-12">
-              {gameState.centerPiles.map((card, idx) => (
-                <div
-                  key={`center-${idx}`}
-                  className={`relative cursor-pointer transition-all ${
-                    selectedPile !== null ? 'hover:scale-110' : ''
-                  }`}
-                  onClick={() => handleCenterPileClick(idx)}
-                >
-                  {card ? (
-                    <img
-                      src={cardImageUrl(card)}
-                      alt="center card"
-                      className="w-24 h-32 rounded shadow-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-32 bg-gray-500 rounded shadow-lg flex items-center justify-center">
-                      <span className="text-gray-800 text-sm font-bold">Empty</span>
+              {gameState.centerPiles.map((pileData, idx) => {
+                const card = pileData?.topCard || pileData;
+                const length = pileData?.length || 0;
+                return (
+                  <div
+                    key={`center-${idx}`}
+                    className={`relative cursor-pointer transition-all ${
+                      selectedPile !== null ? 'hover:scale-110' : ''
+                    }`}
+                    onClick={() => handleCenterPileClick(idx)}
+                  >
+                    {card ? (
+                      <img
+                        src={cardImageUrl(card)}
+                        alt="center card"
+                        className="w-24 h-32 rounded shadow-lg"
+                      />
+                    ) : (
+                      <div className="w-24 h-32 bg-gray-500 rounded shadow-lg flex items-center justify-center">
+                        <span className="text-gray-800 text-sm font-bold">Empty</span>
+                      </div>
+                    )}
+                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white text-sm font-bold">
+                      Pile {idx + 1}
                     </div>
-                  )}
-                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white text-sm font-bold">
-                    Pile {idx + 1}
+                    <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 text-yellow-300 text-xs">
+                      ({length} cards)
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -184,9 +201,17 @@ export default function SpitGame() {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-white font-bold text-lg">{playerName}</h3>
-                <div className="flex gap-6 text-sm text-gray-400">
-                  <span>Stock: {currentPlayer.stockPileCount} cards</span>
-                  <span>Total: {currentPlayer.totalCards} cards</span>
+                <div className="flex items-center">
+                  <div className="relative">
+                    <img
+                      src={cardImageUrl(null)}
+                      alt="your stock"
+                      className="w-12 h-16 rounded"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-yellow-300 font-bold">
+                      {currentPlayer.stockPileCount}
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-2">

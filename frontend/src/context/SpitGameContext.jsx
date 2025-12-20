@@ -26,6 +26,7 @@ export const SpitGameProvider = ({ children }) => {
   const [winner, setWinner] = useState(null);
   const [validMoves, setValidMoves] = useState([]);
   const [waitingForOpponentSpit, setWaitingForOpponentSpit] = useState(false);
+  const [currentRound, setCurrentRound] = useState(1);
 
   // Initialize socket connection to the /spit namespace (once)
   useEffect(() => {
@@ -162,6 +163,12 @@ export const SpitGameProvider = ({ children }) => {
       addNotification(message || 'Spit error');
     });
 
+    socket.on('spit:roundEnd', ({ eliminated, newRound }) => {
+      console.log(`Round ended: ${eliminated} eliminated. Starting round ${newRound}`);
+      setCurrentRound(newRound);
+      addNotification(`${eliminated} is out! Round ${newRound} starting...`);
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
@@ -239,6 +246,7 @@ export const SpitGameProvider = ({ children }) => {
     winner,
     validMoves,
     waitingForOpponentSpit,
+    currentRound,
     joinGame,
     startGame,
     playCard,
