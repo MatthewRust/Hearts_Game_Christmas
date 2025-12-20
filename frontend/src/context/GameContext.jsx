@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import io from 'socket.io-client';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useSocket } from './SocketContext';
 
 const GameContext = createContext(null);
 
@@ -12,7 +12,7 @@ export const useGame = () => {
 };
 
 export const GameProvider = ({ children }) => {
-  const socketRef = useRef(null);
+  const { socket, connected: isConnected } = useSocket();
   const [playerName, setPlayerName] = useState('');
   const [joined, setJoined] = useState(false);
   const [players, setPlayers] = useState([]);
@@ -31,56 +31,13 @@ export const GameProvider = ({ children }) => {
   const [isHost, setIsHost] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [connected, setConnected] = useState(false);
   const [passPending, setPassPending] = useState(false);
   const [passInfo, setPassInfo] = useState(null);
   const [passSubmitted, setPassSubmitted] = useState(false);
 
-  // Initialize socket connection (once)
+  // Set up Hearts game event listeners
   useEffect(() => {
-    if (socketRef.current) return;
-
-    // Browser always needs localhost:3001 (even when frontend is in Docker)
-    const socketUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-
-    console.log('Initializing socket connection to:', socketUrl);
-
-    const socket = io(socketUrl, {
-      transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
-      forceNew: true,
-      path: '/socket.io/',
-      withCredentials: true,
-    });
-
-    socketRef.current = socket;
-
-    // Debug: log all socket.io events
-    socket.onAny((eventName, ...args) => {
-      console.log('Socket event:', eventName, args);
-    });
-
-    // Connection handlers
-    socket.on('connect', () => {
-      console.log('✅ Socket connected:', socket.id);
-      setConnected(true);
-      setError(null);
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected. Reason:', reason);
-      setConnected(false);
-      setError('Disconnected from server');
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('❌ Socket connection error:', err);
-      setConnected(false);
-      setError(`Connection failed: ${err.message}`);
-    });
+    if (!socket) return;
 
     // Game event handlers
     socket.on('players:update', (updatedPlayers) => {
@@ -104,7 +61,7 @@ export const GameProvider = ({ children }) => {
       setScores({});
       setTotals({});
       setLastRoundSummary(null);
-      setLoading(false); // clear loading after start signal
+      setLoading(false);
     });
 
     socket.on('game:ended', ({ message }) => {
@@ -183,7 +140,6 @@ export const GameProvider = ({ children }) => {
       if (scores !== undefined) setScores(scores || {});
       if (totalScores !== undefined) setTotals(totalScores || {});
       if (round !== undefined) setRound(round || 1);
-      // Clear last round summary once a new state comes in for the next round
       setLastRoundSummary(null);
     });
 
@@ -217,10 +173,26 @@ export const GameProvider = ({ children }) => {
     });
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null; // Allow reconnect on remount (React StrictMode dev behavior)
+      socket.off('players:update');
+      socket.off('join:success');
+      socket.off('game:started');
+      socket.off('game:ended');
+      socket.off('game:start:error');
+      socket.off('player:left');
+      socket.off('player:host');
+      socket.off('game:hand');
+      socket.off('game:passPending');
+      socket.off('game:roundPassPending');
+      socket.off('game:passAccepted');
+      socket.off('game:passComplete');
+      socket.off('game:pass:error');
+      socket.off('game:state');
+      socket.off('game:trickResolved');
+      socket.off('game:roundEnd');
+      socket.off('game:over');
+      socket.off('game:play:error');
     };
-  }, []); // Empty deps - only initialize socket once
+  }, [socket]);
 
   // Keep isHost in sync with latest players + playerName without relying on stale closures
   useEffect(() => {
@@ -243,7 +215,7 @@ export const GameProvider = ({ children }) => {
         setError('Please enter a name');
         return;
       }
-      if (!socketRef.current?.connected) {
+      if (!isConnected) {
         setError('Not connected to server. Please wait...');
         return;
       }
@@ -251,42 +223,42 @@ export const GameProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       setPlayerName(name.trim());
-      socketRef.current.emit('join', { name: name.trim() });
+      socket?.emit('join', { name: name.trim() });
     },
-    []
+    [socket]
   );
 
   const startGame = useCallback(() => {
     setLoading(true);
     setError(null);
-    socketRef.current?.emit('game:start');
-  }, []);
+    socket?.emit('game:start');
+  }, [socket]);
 
   const playCard = useCallback(
     (card) => {
-      socketRef.current?.emit('game:playCard', {
+      socket?.emit('game:playCard', {
         playerName,
         card,
       });
     },
-    [playerName]
+    [socket, playerName]
   );
 
   const selectPass = useCallback(
     (cards) => {
       setLoading(true);
       setError(null);
-      socketRef.current?.emit('game:selectPass', {
+      socket?.emit('game:selectPass', {
         playerName,
         cards,
       });
     },
-    [playerName]
+    [socket, playerName]
   );
 
   const endGame = useCallback(() => {
-    socketRef.current?.emit('game:end');
-  }, []);
+    socket?.emit('game:end');
+  }, [socket]);
 
   const value = {
     playerName,
@@ -306,7 +278,7 @@ export const GameProvider = ({ children }) => {
     isHost,
     loading,
     error,
-    connected,
+    connected: isConnected,
     lastRoundSummary,
     passPending,
     passInfo,

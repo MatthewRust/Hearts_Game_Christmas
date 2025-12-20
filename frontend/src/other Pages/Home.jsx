@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '@/context/GameContext';
+import { useSpitGame } from '@/context/SpitGameContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { joinGame, joined, loading, error, connected } = useGame();
+  const { joinGame, joined, loading: heartsLoading, error: heartsError, connected: heartsConnected } = useGame();
+  const { joinGame: spitJoinGame, joined: spitJoined, loading: spitLoading, error: spitError, connected: spitConnected } = useSpitGame();
   const [name, setName] = useState('');
-
-  const handleJoin = () => {
-    joinGame(name);
-  };
+  const [gameMode, setGameMode] = useState(null); // 'hearts' or 'spit'
 
   useEffect(() => {
     if (joined) {
@@ -20,18 +19,80 @@ export default function Home() {
     }
   }, [joined, navigate]);
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleJoin();
+  useEffect(() => {
+    if (spitJoined) {
+      navigate('/spit-waiting-room');
+    }
+  }, [spitJoined, navigate]);
+
+  const handleHeartsJoin = () => {
+    if (name.trim()) {
+      joinGame(name);
     }
   };
 
+  const handleSpitJoin = () => {
+    if (name.trim()) {
+      spitJoinGame(name);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && gameMode) {
+      if (gameMode === 'hearts') {
+        handleHeartsJoin();
+      } else {
+        handleSpitJoin();
+      }
+    }
+  };
+
+  const loading = gameMode === 'hearts' ? heartsLoading : spitLoading;
+  const error = gameMode === 'hearts' ? heartsError : spitError;
+  const connected = gameMode === 'hearts' ? heartsConnected : spitConnected;
+
+  if (!gameMode) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md p-8 bg-gray-800 border-gray-700">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-indigo-400 mb-2">Card Games</h1>
+              <p className="text-gray-400">Choose a game to play</p>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                onClick={() => setGameMode('hearts')}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 text-lg"
+                size="lg"
+              >
+                ♥ Hearts
+              </Button>
+              <Button
+                onClick={() => setGameMode('spit')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-6 text-lg"
+                size="lg"
+              >
+                ⚡ Spit
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  const isHearts = gameMode === 'hearts';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 bg-gray-800 border-gray-700">
+    <div className={`min-h-screen flex items-center justify-center p-4 ${isHearts ? 'bg-gradient-to-br from-gray-900 to-gray-800' : 'bg-gradient-to-br from-green-900 to-green-800'}`}>
+      <Card className={`w-full max-w-md p-8 ${isHearts ? 'bg-gray-800 border-gray-700' : 'bg-gray-800 border-gray-700'}`}>
         <div className="space-y-6">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-black-500 mb-2">♥ Scabby Queen</h1>
+            <h1 className={`text-4xl font-bold mb-2 ${isHearts ? 'text-blue-400' : 'text-yellow-300'}`}>
+              {isHearts ? '♥ Hearts' : '⚡ Spit'}
+            </h1>
             <p className="text-gray-400">Join a game with friends</p>
           </div>
 
@@ -48,6 +109,7 @@ export default function Home() {
                 onKeyPress={handleKeyPress}
                 disabled={loading}
                 className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                autoFocus
               />
             </div>
 
@@ -63,14 +125,24 @@ export default function Home() {
               </div>
             )}
 
-            <Button
-              onClick={handleJoin}
-              disabled={!name.trim() || loading || !connected}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-              size="lg"
-            >
-              {loading ? 'Joining...' : connected ? 'Join Game' : 'Connecting...'}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={isHearts ? handleHeartsJoin : handleSpitJoin}
+                disabled={!name.trim() || loading || !connected}
+                className={`flex-1 ${isHearts ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'} disabled:opacity-50`}
+                size="lg"
+              >
+                {loading ? 'Joining...' : connected ? 'Join Game' : 'Connecting...'}
+              </Button>
+              <Button
+                onClick={() => setGameMode(null)}
+                variant="outline"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                disabled={loading}
+              >
+                Back
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
