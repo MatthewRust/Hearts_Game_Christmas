@@ -260,6 +260,13 @@ export const GameProvider = ({ children }) => {
     socket?.emit('game:end');
   }, [socket]);
 
+  const leaveWaitingRoom = useCallback(() => {
+    setJoined(false);
+    setPlayerName('');
+    setPlayers([]);
+    setError(null);
+  }, []);
+
   const value = {
     playerName,
     joined,
@@ -289,6 +296,7 @@ export const GameProvider = ({ children }) => {
     playCard,
     selectPass,
     endGame,
+    leaveWaitingRoom,
     addNotification,
   };
 

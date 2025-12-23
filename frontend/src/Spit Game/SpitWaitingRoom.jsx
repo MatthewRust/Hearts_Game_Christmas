@@ -17,6 +17,7 @@ export default function SpitWaitingRoom() {
     joinGame,
     startGame,
     endGame,
+    leaveWaitingRoom,
   } = useSpitGame();
 
   const [inputName, setInputName] = useState('');
@@ -99,6 +100,16 @@ export default function SpitWaitingRoom() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 to-green-800 p-4">
+      <Button
+        onClick={() => {
+          leaveWaitingRoom();
+          navigate('/');
+        }}
+        variant="outline"
+        className="fixed top-4 left-4 bg-gray-700 hover:bg-gray-600 text-white border-gray-600 z-50"
+      >
+        ← Home
+      </Button>
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">Spit</h1>
@@ -136,24 +147,15 @@ export default function SpitWaitingRoom() {
             </div>
           </div>
 
-          <div className="flex gap-3">
-            {players.length === 2 && (
-              <Button
-                onClick={handleStartGame}
-                disabled={loading}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
-              >
-                {loading ? 'Starting...' : 'Start Game'}
-              </Button>
-            )}
+          {players.length === 2 && (
             <Button
-              onClick={handleEndGame}
-              variant="outline"
-              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+              onClick={handleStartGame}
+              disabled={loading}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
             >
-              Back to Home
+              {loading ? 'Starting...' : 'Start Game'}
             </Button>
-          </div>
+          )}
 
           {players.length < 2 && (
             <div className="mt-4 text-center text-gray-400">

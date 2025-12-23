@@ -232,6 +232,13 @@ export const SpitGameProvider = ({ children }) => {
     socketRef.current?.emit('spit:end');
   }, []);
 
+  const leaveWaitingRoom = useCallback(() => {
+    setJoined(false);
+    setPlayerName('');
+    setPlayers([]);
+    setError(null);
+  }, []);
+
   const value = {
     playerName,
     joined,
@@ -253,6 +260,7 @@ export const SpitGameProvider = ({ children }) => {
     requestSpit,
     getValidMoves,
     endGame,
+    leaveWaitingRoom,
     addNotification,
   };
 

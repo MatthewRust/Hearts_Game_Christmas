@@ -184,9 +184,6 @@ export default function SpitGame() {
                         <span className="text-gray-800 text-sm font-bold">Empty</span>
                       </div>
                     )}
-                    <div className="absolute -bottom-8 md:-bottom-6 left-1/2 transform -translate-x-1/2 text-white text-xs md:text-sm font-bold whitespace-nowrap">
-                      Pile {idx + 1}
-                    </div>
                   </div>
                 );
               })}

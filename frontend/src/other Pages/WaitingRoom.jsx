@@ -7,7 +7,7 @@ import { AlertCircle } from 'lucide-react';
 
 export default function WaitingRoom() {
   const navigate = useNavigate();
-  const {joined,playerName, players, isHost, gameStarted, passPending, notifications, loading, error, startGame} = useGame();
+  const {joined,playerName, players, isHost, gameStarted, passPending, notifications, loading, error, startGame, leaveWaitingRoom} = useGame();
 
   useEffect(() => {
     if (!joined) {navigate('/');}
@@ -23,6 +23,16 @@ export default function WaitingRoom() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
+      <Button
+        onClick={() => {
+          leaveWaitingRoom();
+          navigate('/');
+        }}
+        variant="outline"
+        className="fixed top-4 left-4 bg-gray-700 hover:bg-gray-600 text-white border-gray-600 z-50"
+      >
+        ← Home
+      </Button>
       <div className="max-w-2xl mx-auto space-y-6">
         <Card className="bg-gray-800 border-gray-700 p-6">
           <div className="text-center">
@@ -66,27 +76,7 @@ export default function WaitingRoom() {
                 >
                   {loading ? 'Starting...' : 'Start Scabby Queeny game'}
                 </Button>
-                <Button
-                  onClick={() => navigate('/')}
-                  variant="outline"
-                  className="w-full bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-                  size="lg"
-                >
-                  Home
-                </Button>
               </div>
-            </div>
-          )}
-          {!isHost && (
-            <div>
-              <Button
-                onClick={() => navigate('/')}
-                variant="outline"
-                className="w-full bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-                size="lg"
-              >
-                Home
-              </Button>
             </div>
           )}
         </Card>
