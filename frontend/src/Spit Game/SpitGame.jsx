@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cardImageUrl } from '@/utils/cardImage';
 import tableImg from '@/card/Table.png';
+import dougalIcon from '@/assets/DougalPixel.png';
 
 export default function SpitGame() {
   const navigate = useNavigate();
@@ -53,6 +54,10 @@ export default function SpitGame() {
   const currentPlayer = gameState.player1.name === playerName ? gameState.player1 : gameState.player2;
   const opponent = gameState.player1.name === playerName ? gameState.player2 : gameState.player1;
 
+  const handleBackToWaitingRoom = () => {
+    navigate('/spit-waiting-room');
+  };
+
   const handleCenterPileClick = (centerPileIndex) => {
     if (waitingForOpponentSpit) {
       setIllegalNotification('Waiting for opponent to spit');
@@ -75,19 +80,52 @@ export default function SpitGame() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 to-green-800 p-2 md:p-4">
       <div className="max-w-6xl mx-auto">
+        {/* Victory Banner/Modal */}
+        {gameOver && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 border-4 border-yellow-300 rounded-2xl p-8 max-w-2xl w-full shadow-2xl">
+              <div className="flex items-center justify-center gap-8">
+                {/* Dougal Image */}
+                <img
+                  src={dougalIcon}
+                  alt="Dougal"
+                  className="w-32 h-32 md:w-40 md:h-40 pixelated"
+                />
+                
+                {/* Winner Text */}
+                <div className="text-center md:text-left">
+                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+                    {winner} is am an winner
+                  </h2>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3 mt-8">
+                <Button
+                  onClick={handleBackToWaitingRoom}
+                  className="w-full bg-green-700 hover:bg-green-800 text-white font-bold text-lg py-3"
+                >
+                  Return to Waiting Room
+                </Button>
+                <Button
+                  onClick={endGame}
+                  variant="outline"
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white border-gray-600 font-bold"
+                >
+                  Leave Game
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-3 md:mb-6 flex-col md:flex-row gap-2">
           <div className="text-white text-center md:text-left">
             <h1 className="text-3xl md:text-4xl font-bold text-yellow-300">Spit</h1>
             <p className="text-xs md:text-sm text-gray-300">{playerName}</p>
             <p className="text-xs text-gray-400">Round {currentRound}</p>
           </div>
-          {gameOver && (
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-yellow-300">
-                {winner === playerName ? '🎉 You Win!' : `${winner} wins!`}
-              </h2>
-            </div>
-          )}
           <Button
             onClick={endGame}
             variant="destructive"
@@ -153,6 +191,11 @@ export default function SpitGame() {
                   {opponent.stockPileCount}
                 </span>
               </div>
+              {opponent.stockPileCount === 0 && (
+                <div className="text-red-400 text-xs md:text-sm font-bold animate-pulse">
+                  ⚠️ Out of Stock!
+                </div>
+              )}
             </div>
           </div>
 
@@ -195,7 +238,7 @@ export default function SpitGame() {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-white font-bold text-lg">{playerName}</h3>
-                <div className="flex items-center">
+                <div className="flex items-center gap-2">
                   <div className="relative">
                     <img
                       src={cardImageUrl(null)}
@@ -206,6 +249,11 @@ export default function SpitGame() {
                       {currentPlayer.stockPileCount}
                     </span>
                   </div>
+                  {currentPlayer.stockPileCount === 0 && (
+                    <div className="text-red-400 text-xs md:text-sm font-bold">
+                      ⚠️ Out of Stock!
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -214,11 +262,17 @@ export default function SpitGame() {
                   className={`${
                     waitingForOpponentSpit
                       ? 'bg-yellow-600 hover:bg-yellow-700 animate-pulse'
+                      : opponent.stockPileCount === 0
+                      ? 'bg-purple-600 hover:bg-purple-700'
                       : 'bg-orange-600 hover:bg-orange-700'
                   }`}
-                  disabled={waitingForOpponentSpit}
+                  disabled={waitingForOpponentSpit || currentPlayer.stockPileCount === 0}
                 >
-                  {waitingForOpponentSpit ? 'Waiting for Opponent...' : 'Spit!'}
+                  {waitingForOpponentSpit 
+                    ? 'Waiting for Opponent...' 
+                    : opponent.stockPileCount === 0 
+                    ? 'Spit Solo!' 
+                    : 'Spit!'}
                 </Button>
               </div>
             </div>

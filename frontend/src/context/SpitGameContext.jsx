@@ -141,9 +141,13 @@ export const SpitGameProvider = ({ children }) => {
       }
     });
 
-    socket.on('spit:spitExecuted', ({ message }) => {
+    socket.on('spit:spitExecuted', ({ message, soloSpit, spitter }) => {
       setWaitingForOpponentSpit(false);
-      addNotification('Spit! New cards dealt to center.');
+      if (soloSpit) {
+        addNotification(`${spitter} spit alone! (opponent has no stock)`);
+      } else {
+        addNotification('Spit! New cards dealt to center.');
+      }
     });
 
     socket.on('spit:spitError', ({ message }) => {

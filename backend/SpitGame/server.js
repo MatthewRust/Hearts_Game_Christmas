@@ -89,6 +89,19 @@ export function initSpitServer(io) {
       try {
         const result = spitGame.playCard(playerName, spitPileIndex, centerPileIndex);
 
+        // Check if player has won (no stock AND all spit piles empty)
+        if (spitGame.hasWon(playerName)) {
+          spitGame.gameOver = true;
+          spitGame.winner = playerName;
+          spit.emit('spit:gameOver', {
+            winner: playerName,
+            endedAt: Date.now(),
+          });
+          gameInProgress = false;
+          spitGame = null;
+          return;
+        }
+
         // Broadcast updated game state to all players
         broadcastGameState();
 
@@ -125,32 +138,41 @@ export function initSpitServer(io) {
         return;
       }
 
+      // Check if player can spit
+      if (!spitGame.canSpit(playerName)) {
+        socket.emit('spit:spitError', { message: 'Not enough stock cards to spit' });
+        return;
+      }
+
       // Add player to spit requests
       spitRequests.add(playerName);
 
-      // Broadcast that this player is waiting to spit
-      spit.emit('spit:playerWaitingSpit', { playerName });
+      const otherPlayerName = playerName === spitGame.player1Name ? spitGame.player2Name : spitGame.player1Name;
+      const opponentHasStock = spitGame.hasStock(otherPlayerName);
 
-      // Check if both players have requested spit
-      const playerNames = [spitGame.player1Name, spitGame.player2Name];
-      if (playerNames.every(name => spitRequests.has(name))) {
+      // If opponent has no stock, this player can spit alone
+      if (!opponentHasStock) {
         try {
-          // Both players have requested spit - flip cards from stock to center
+          // Execute solo spit (will take 2 cards from this player's stock)
           spitGame.executeSpit();
 
           // Clear spit requests
           spitRequests.clear();
 
           // Broadcast that spit has been executed
-          spit.emit('spit:spitExecuted', { message: 'New cards dealt to center' });
+          spit.emit('spit:spitExecuted', { 
+            message: `${playerName} spit (opponent has no stock)`,
+            soloSpit: true,
+            spitter: playerName
+          });
 
-          // Check if either player is out of cards
-          if (spitGame.players[spitGame.player1Name].handSize === 0) {
+          // Check if player has won after spitting
+          if (spitGame.hasWon(playerName)) {
             spitGame.gameOver = true;
-            spitGame.winner = spitGame.player1Name;
-          } else if (spitGame.players[spitGame.player2Name].handSize === 0) {
+            spitGame.winner = playerName;
+          } else if (spitGame.hasWon(otherPlayerName)) {
             spitGame.gameOver = true;
-            spitGame.winner = spitGame.player2Name;
+            spitGame.winner = otherPlayerName;
           }
 
           // Broadcast updated game state
@@ -167,6 +189,49 @@ export function initSpitServer(io) {
         } catch (err) {
           socket.emit('spit:spitError', { message: err.message });
           spitRequests.clear();
+        }
+      } else {
+        // Opponent has stock - wait for both players to request spit
+        // Broadcast that this player is waiting to spit
+        spit.emit('spit:playerWaitingSpit', { playerName });
+
+        // Check if both players have requested spit
+        const playerNames = [spitGame.player1Name, spitGame.player2Name];
+        if (playerNames.every(name => spitRequests.has(name))) {
+          try {
+            // Both players have requested spit - flip cards from stock to center
+            spitGame.executeSpit();
+
+            // Clear spit requests
+            spitRequests.clear();
+
+            // Broadcast that spit has been executed
+            spit.emit('spit:spitExecuted', { message: 'New cards dealt to center' });
+
+            // Check if either player has won
+            if (spitGame.hasWon(spitGame.player1Name)) {
+              spitGame.gameOver = true;
+              spitGame.winner = spitGame.player1Name;
+            } else if (spitGame.hasWon(spitGame.player2Name)) {
+              spitGame.gameOver = true;
+              spitGame.winner = spitGame.player2Name;
+            }
+
+            // Broadcast updated game state
+            broadcastGameState();
+
+            if (spitGame.gameOver) {
+              spit.emit('spit:gameOver', {
+                winner: spitGame.winner,
+                endedAt: Date.now(),
+              });
+              gameInProgress = false;
+              spitGame = null;
+            }
+          } catch (err) {
+            socket.emit('spit:spitError', { message: err.message });
+            spitRequests.clear();
+          }
         }
       }
     });

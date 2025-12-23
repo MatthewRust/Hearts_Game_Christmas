@@ -274,6 +274,16 @@ class SpitGame {
   }
 
   /**
+   * Check if a player has won: no cards in stock AND all spit piles empty
+   */
+  hasWon(playerName) {
+    const player = this.players[playerName];
+    const noStock = player.stockPile.length === 0;
+    const noSpitPiles = player.spitPiles.every(pile => pile.length === 0);
+    return noStock && noSpitPiles;
+  }
+
+  /**
    * Check if a round is over: first player to have all spit piles empty wins the round
    */
   checkRoundEnd() {
@@ -428,30 +438,66 @@ class SpitGame {
   }
 
   /**
-   * Execute spit: flip one card from each player's stock pile to each center pile
+   * Execute spit: flip cards from stock pile(s) to center piles
+   * If both players have stock: each player flips 1 card to each center pile
+   * If only one player has stock: that player flips 2 cards from their stock
    */
   executeSpit() {
     const p1 = this.players[this.player1Name];
     const p2 = this.players[this.player2Name];
 
-    // Check if both players have stock cards
-    if (p1.stockPile.length === 0 || p2.stockPile.length === 0) {
-      throw new Error('Cannot spit: one or both players have no stock cards');
+    const p1HasStock = p1.stockPile.length > 0;
+    const p2HasStock = p2.stockPile.length > 0;
+
+    // If neither player has stock, cannot spit
+    if (!p1HasStock && !p2HasStock) {
+      throw new Error('Cannot spit: both players have no stock cards');
     }
 
-    // Take one card from each player's stock
-    const p1Card = p1.stockPile.pop();
-    const p2Card = p2.stockPile.pop();
+    // Case 1: Both players have stock - each flips one card
+    if (p1HasStock && p2HasStock) {
+      const p1Card = p1.stockPile.pop();
+      const p2Card = p2.stockPile.pop();
 
-    // Place p1's card on first center pile, p2's card on second center pile
-    this.centerPiles[0].push(p1Card);
-    this.centerPiles[1].push(p2Card);
+      this.centerPiles[0].push(p1Card);
+      this.centerPiles[1].push(p2Card);
 
-    // Decrement total hand sizes for each player
-    p1.handSize--;
-    p2.handSize--;
+      p1.handSize--;
+      p2.handSize--;
 
-    console.log(`Spit executed: ${p1Card.rank} of ${p1Card.suit} and ${p2Card.rank} of ${p2Card.suit} dealt to center`);
+      console.log(`Spit executed: ${p1Card.rank} of ${p1Card.suit} and ${p2Card.rank} of ${p2Card.suit} dealt to center`);
+    }
+    // Case 2: Only one player has stock - they flip 2 cards
+    else if (p1HasStock && !p2HasStock) {
+      // Player 1 has stock, player 2 doesn't - p1 flips 2 cards
+      if (p1.stockPile.length < 2) {
+        throw new Error('Not enough stock cards to spit');
+      }
+      const card1 = p1.stockPile.pop();
+      const card2 = p1.stockPile.pop();
+
+      this.centerPiles[0].push(card1);
+      this.centerPiles[1].push(card2);
+
+      p1.handSize -= 2;
+
+      console.log(`Spit executed (solo): ${this.player1Name} flipped ${card1.rank} and ${card2.rank} to center`);
+    }
+    else if (p2HasStock && !p1HasStock) {
+      // Player 2 has stock, player 1 doesn't - p2 flips 2 cards
+      if (p2.stockPile.length < 2) {
+        throw new Error('Not enough stock cards to spit');
+      }
+      const card1 = p2.stockPile.pop();
+      const card2 = p2.stockPile.pop();
+
+      this.centerPiles[0].push(card1);
+      this.centerPiles[1].push(card2);
+
+      p2.handSize -= 2;
+
+      console.log(`Spit executed (solo): ${this.player2Name} flipped ${card1.rank} and ${card2.rank} to center`);
+    }
   }
 
   /**
@@ -505,6 +551,33 @@ class SpitGame {
     }
 
     return moves;
+  }
+
+  /**
+   * Check if a player has stock cards
+   */
+  hasStock(playerName) {
+    const player = this.players[playerName];
+    return player && player.stockPile.length > 0;
+  }
+
+  /**
+   * Check if a player can spit (has at least 1 or 2 stock cards depending on situation)
+   */
+  canSpit(playerName) {
+    const player = this.players[playerName];
+    if (!player) return false;
+
+    const otherPlayerName = playerName === this.player1Name ? this.player2Name : this.player1Name;
+    const otherPlayer = this.players[otherPlayerName];
+
+    // If opponent has stock, need at least 1 card to spit
+    if (otherPlayer.stockPile.length > 0) {
+      return player.stockPile.length >= 1;
+    }
+
+    // If opponent has no stock, need at least 2 cards to spit alone
+    return player.stockPile.length >= 2;
   }
 }
 
