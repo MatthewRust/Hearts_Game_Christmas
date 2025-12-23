@@ -67,23 +67,26 @@ export default function WaitingRoom() {
                   {loading ? 'Starting...' : 'Start Scabby Queeny game'}
                 </Button>
                 <Button
-                  onClick={() => navigate('/spit')}
-                  disabled={!isHost || players.length !== 2}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                  onClick={() => navigate('/')}
+                  variant="outline"
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
                   size="lg"
                 >
-                  Start Spit (2 players)
+                  Home
                 </Button>
               </div>
             </div>
           )}
-
           {!isHost && (
-            <div className="space-y-4">
-              <p className="text-gray-400 text-center">
-                Waiting for <span className="font-semibold">{players.find((p) => p.isHost)?.name || 'host'}</span> to start the game...
-              </p>
-              <p className="text-gray-500 text-center text-sm">Only the host can start Spit, and exactly 2 players are required.</p>
+            <div>
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="w-full bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                size="lg"
+              >
+                Home
+              </Button>
             </div>
           )}
         </Card>

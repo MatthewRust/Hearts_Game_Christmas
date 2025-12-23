@@ -57,8 +57,8 @@ export default function Home() {
         <Card className="w-full max-w-md p-8 bg-gray-800 border-gray-700">
           <div className="space-y-6">
             <div className="text-center">
-              <h1 className="text-4xl font-bold text-indigo-400 mb-2">Card Games</h1>
-              <p className="text-gray-400">Choose a game to play</p>
+              <h1 className="text-4xl font-bold text-indigo-400 mb-2">Rust Christmas Card Games</h1>
+              <p className="text-gray-400">Choose a game to play!! and watch in wonder</p>
             </div>
 
             <div className="space-y-3">
@@ -67,7 +67,7 @@ export default function Home() {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 text-lg"
                 size="lg"
               >
-                ♥ Hearts
+                ♠ Scabby Queen
               </Button>
               <Button
                 onClick={() => setGameMode('spit')}
@@ -91,7 +91,7 @@ export default function Home() {
         <div className="space-y-6">
           <div className="text-center">
             <h1 className={`text-4xl font-bold mb-2 ${isHearts ? 'text-blue-400' : 'text-yellow-300'}`}>
-              {isHearts ? '♥ Hearts' : '⚡ Spit'}
+              {isHearts ? '♠ Scabby Queen' : '⚡ Spit'}
             </h1>
             <p className="text-gray-400">Join a game with friends</p>
           </div>

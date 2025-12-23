@@ -35,7 +35,7 @@ export const GameProvider = ({ children }) => {
   const [passInfo, setPassInfo] = useState(null);
   const [passSubmitted, setPassSubmitted] = useState(false);
 
-  // Set up Hearts game event listeners
+  // Set up Scabby Queen game event listeners
   useEffect(() => {
     if (!socket) return;
 
