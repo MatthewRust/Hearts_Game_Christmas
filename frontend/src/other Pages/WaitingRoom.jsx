@@ -7,7 +7,7 @@ import { AlertCircle } from 'lucide-react';
 
 export default function WaitingRoom() {
   const navigate = useNavigate();
-  const {joined,playerName, players, isHost, gameStarted, passPending, notifications, loading, error, startGame} = useGame();
+  const {joined,playerName, players, isHost, gameStarted, passPending, notifications, loading, error, startGame, leaveWaitingRoom} = useGame();
 
   useEffect(() => {
     if (!joined) {navigate('/');}
@@ -23,6 +23,16 @@ export default function WaitingRoom() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
+      <Button
+        onClick={() => {
+          leaveWaitingRoom();
+          navigate('/');
+        }}
+        variant="outline"
+        className="fixed top-4 left-4 bg-gray-700 hover:bg-gray-600 text-white border-gray-600 z-50"
+      >
+        ← Home
+      </Button>
       <div className="max-w-2xl mx-auto space-y-6">
         <Card className="bg-gray-800 border-gray-700 p-6">
           <div className="text-center">
@@ -66,24 +76,7 @@ export default function WaitingRoom() {
                 >
                   {loading ? 'Starting...' : 'Start Scabby Queeny game'}
                 </Button>
-                <Button
-                  onClick={() => navigate('/spit')}
-                  disabled={!isHost || players.length !== 2}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                  size="lg"
-                >
-                  Start Spit (2 players)
-                </Button>
               </div>
-            </div>
-          )}
-
-          {!isHost && (
-            <div className="space-y-4">
-              <p className="text-gray-400 text-center">
-                Waiting for <span className="font-semibold">{players.find((p) => p.isHost)?.name || 'host'}</span> to start the game...
-              </p>
-              <p className="text-gray-500 text-center text-sm">Only the host can start Spit, and exactly 2 players are required.</p>
             </div>
           )}
         </Card>

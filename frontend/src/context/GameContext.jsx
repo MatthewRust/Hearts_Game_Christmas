@@ -35,7 +35,7 @@ export const GameProvider = ({ children }) => {
   const [passInfo, setPassInfo] = useState(null);
   const [passSubmitted, setPassSubmitted] = useState(false);
 
-  // Set up Hearts game event listeners
+  // Set up Scabby Queen game event listeners
   useEffect(() => {
     if (!socket) return;
 
@@ -219,7 +219,6 @@ export const GameProvider = ({ children }) => {
         setError('Not connected to server. Please wait...');
         return;
       }
-      console.log('Emitting join event for:', name.trim());
       setLoading(true);
       setError(null);
       setPlayerName(name.trim());
@@ -260,6 +259,13 @@ export const GameProvider = ({ children }) => {
     socket?.emit('game:end');
   }, [socket]);
 
+  const leaveWaitingRoom = useCallback(() => {
+    setJoined(false);
+    setPlayerName('');
+    setPlayers([]);
+    setError(null);
+  }, []);
+
   const value = {
     playerName,
     joined,
@@ -289,6 +295,7 @@ export const GameProvider = ({ children }) => {
     playCard,
     selectPass,
     endGame,
+    leaveWaitingRoom,
     addNotification,
   };
 

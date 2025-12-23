@@ -74,17 +74,17 @@ export default function GamePage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 bg-gray-800 rounded-lg p-4 shadow-lg">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 bg-gray-800 rounded-lg p-3 md:p-4 shadow-lg gap-2 md:gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-black-500">♥ Scabby Queen</h2>
-          <div className="text-sm text-gray-400">Round {round}</div>
+          <h2 className="text-2xl md:text-3xl font-bold text-black-500">♠ Scabby Queen</h2>
+          <div className="text-xs md:text-sm text-gray-400">Round {round}</div>
         </div>
-        <div className="text-right">
+        <div className="text-right text-sm md:text-base">
           {passPending ? (
-            <div className="text-lg font-semibold text-orange-300">Pass 2 cards to {passInfo?.target || 'next player'}</div>
+            <div className="md:text-lg font-semibold text-orange-300">Pass 2 cards to {passInfo?.target || 'next player'}</div>
           ) : (
             <>
-              <div className="text-lg font-semibold">
+              <div className="md:text-lg font-semibold">
                 Current turn:{' '}
                 <span className={isMyTurn ? 'text-green-400' : 'text-yellow-400'}>
                   {turn || '—'}
@@ -98,15 +98,15 @@ export default function GamePage() {
         </div>
       </div>
       <div
-        className="flex-1 rounded-xl shadow-2xl p-8 mb-4 relative overflow-hidden"
+        className="flex-1 rounded-xl shadow-2xl p-4 md:p-8 mb-4 relative overflow-hidden"
         style={{
           backgroundImage: `url(${tableImg})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          minHeight: '400px',
+          minHeight: '250px',
         }}
       >
-        <div className="flex items-center justify-center min-h-[300px]">
+        <div className="flex items-center justify-center min-h-[200px] md:min-h-[300px]">
           {pile.length === 0 ? (
             <div className="text-white/30 text-2xl font-light">
               Waiting for first card...
@@ -127,14 +127,14 @@ export default function GamePage() {
                     key={key}
                     src={url}
                     alt={alt}
-                    className="h-24 sm:h-28 shadow-xl rounded-lg transform hover:scale-105 transition-transform"
+                    className="h-16 sm:h-20 md:h-24 lg:h-28 shadow-xl rounded-lg transform hover:scale-105 transition-transform"
                   />
                 );
               })}
             </div>
           )}
         </div>
-        <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg p-4 shadow-xl">
+        <div className="hidden md:block absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg p-4 shadow-xl">
           <h3 className="text-lg font-bold mb-2 text-yellow-400">Scores</h3>
           <div className="space-y-1">
             {Object.entries(scores).map(([p, s]) => (
@@ -167,9 +167,44 @@ export default function GamePage() {
         </div>
       </div>
 
+      {/* Scores box for mobile only - positioned after table */}
+      <div className="md:hidden bg-black/70 backdrop-blur-sm rounded-lg p-3 mb-4 shadow-xl">
+        <h3 className="text-base font-bold mb-2 text-yellow-400">Scores</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-xs text-gray-400 mb-1">Current Round</div>
+            <div className="space-y-1">
+              {Object.entries(scores).map(([p, s]) => (
+                <div key={p} className={`text-xs flex justify-between ${
+                  p === playerName ? 'text-green-400 font-semibold' : 'text-white'
+                }`}>
+                  <span>{p}:</span>
+                  <span>{s}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {Object.keys(totals || {}).length > 0 && (
+            <div>
+              <div className="text-xs text-blue-300 mb-1">Total Points</div>
+              <div className="space-y-1">
+                {Object.entries(totals).map(([p, t]) => (
+                  <div key={`tot-${p}`} className={`text-xs flex justify-between ${
+                    p === playerName ? 'text-green-400 font-semibold' : 'text-white'
+                  }`}>
+                    <span>{p}:</span>
+                    <span>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {lastRoundSummary && (
         <Card className="bg-indigo-900/40 border border-indigo-500 text-white mb-4">
-          <div className="p-4 space-y-2">
+          <div className="p-3 md:p-4 space-y-2">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">Round {lastRoundSummary.round} complete</div>
               <div className="text-sm text-indigo-200">Totals updated</div>
@@ -201,11 +236,11 @@ export default function GamePage() {
           </div>
         </Card>
       )}
-      <Card className="bg-gray-800 rounded-xl shadow-xl p-6 border-gray-700">
+      <Card className="bg-gray-800 rounded-xl shadow-xl p-3 md:p-6 border-gray-700">
         {passPending && (
-          <div className="mb-4 p-4 rounded-lg bg-yellow-900/40 border border-yellow-500 text-yellow-100">
-            <div className="font-semibold mb-1">Select exactly 2 cards to pass</div>
-            <div className="text-sm text-yellow-200">
+          <div className="mb-4 p-3 md:p-4 rounded-lg bg-yellow-900/40 border border-yellow-500 text-yellow-100">
+            <div className="font-semibold mb-1 text-sm md:text-base">Select exactly 2 cards to pass</div>
+            <div className="text-xs md:text-sm text-yellow-200">
               Passing to {passInfo?.target || `player ${passInfo?.distance || ''} to your left`}
             </div>
             <div className="mt-2 text-xs text-yellow-200">
@@ -218,11 +253,11 @@ export default function GamePage() {
                 </span>
               ))}
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex gap-2 flex-col md:flex-row">
               <Button
                 onClick={submitPass}
                 disabled={selectedPass.length !== 2 || passSubmitted || loading}
-                className="bg-yellow-500 text-black hover:bg-yellow-400"
+                className="bg-yellow-500 text-black hover:bg-yellow-400 text-sm md:text-base"
               >
                 {passSubmitted ? 'Waiting for others...' : 'Confirm Pass'}
               </Button>
@@ -230,26 +265,26 @@ export default function GamePage() {
                 onClick={() => setSelectedPass([])}
                 disabled={passSubmitted || loading}
                 variant="outline"
-                className="border-yellow-400 text-yellow-200"
+                className="border-yellow-400 text-yellow-200 text-sm md:text-base"
               >
                 Clear
               </Button>
             </div>
           </div>
         )}
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
+          <h3 className="text-lg md:text-xl font-bold">
             Your Hand
             {!passPending && isMyTurn && (
-              <span className="ml-2 text-green-400 text-sm">
+              <span className="ml-2 text-green-400 text-xs md:text-sm">
                 (Click a card to play)
               </span>
             )}
           </h3>
-          <div className="text-gray-400 text-sm">Cards: {hand?.length ?? 0}</div>
+          <div className="text-gray-400 text-xs md:text-sm">Cards: {hand?.length ?? 0}</div>
         </div>
 
-        <div className="flex gap-2 flex-wrap justify-center">
+        <div className="flex gap-1 md:gap-2 flex-wrap justify-center">
           {hand.map((c, idx) => {
             const nc = normalizeCard(c) || {
               rank: '?',
@@ -297,7 +332,7 @@ export default function GamePage() {
                 <img
                   src={url}
                   alt={label}
-                  className="h-24 sm:h-28 block"
+                  className="h-14 sm:h-20 md:h-24 lg:h-28 block"
                 />
               </button>
             );
