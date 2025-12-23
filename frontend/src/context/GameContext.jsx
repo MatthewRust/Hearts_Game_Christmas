@@ -219,7 +219,6 @@ export const GameProvider = ({ children }) => {
         setError('Not connected to server. Please wait...');
         return;
       }
-      console.log('Emitting join event for:', name.trim());
       setLoading(true);
       setError(null);
       setPlayerName(name.trim());

@@ -68,18 +68,15 @@ export const SpitGameProvider = ({ children }) => {
 
     // Spit game events
     socket.on('spit:playersUpdate', (updatedPlayers) => {
-      console.log('Players updated:', updatedPlayers);
       setPlayers(updatedPlayers);
     });
 
     socket.on('spit:joinSuccess', (player) => {
-      console.log('Join successful:', player);
       setJoined(true);
       setLoading(false);
     });
 
     socket.on('spit:gameStarted', (data) => {
-      console.log('Game started:', data);
       setGameStarted(true);
       setGameOver(false);
       setWinner(null);
@@ -89,7 +86,6 @@ export const SpitGameProvider = ({ children }) => {
     });
 
     socket.on('spit:gameState', (state) => {
-      console.log('Game state updated:', state);
       setGameState(state);
       if (state.gameOver) {
         setGameOver(true);
@@ -98,7 +94,6 @@ export const SpitGameProvider = ({ children }) => {
     });
 
     socket.on('spit:gameOver', ({ winner: w, endedAt }) => {
-      console.log('Game over. Winner:', w);
       setGameOver(true);
       setWinner(w);
       setGameStarted(false);
@@ -106,7 +101,6 @@ export const SpitGameProvider = ({ children }) => {
     });
 
     socket.on('spit:gameEnded', ({ message }) => {
-      console.log('Game ended:', message);
       setGameStarted(false);
       setGameState(null);
       setGameOver(false);
@@ -131,17 +125,14 @@ export const SpitGameProvider = ({ children }) => {
     });
 
     socket.on('spit:validMoves', ({ moves }) => {
-      console.log('Valid moves:', moves);
       setValidMoves(moves);
     });
 
     socket.on('spit:validMovesError', ({ message }) => {
-      console.log('Valid moves error:', message);
       setValidMoves([]);
     });
 
     socket.on('spit:playerWaitingSpit', ({ playerName: waitingPlayer }) => {
-      console.log(`${waitingPlayer} is waiting to spit`);
       if (waitingPlayer === playerName) {
         setWaitingForOpponentSpit(true);
         addNotification('Waiting for opponent to spit...');
@@ -151,20 +142,17 @@ export const SpitGameProvider = ({ children }) => {
     });
 
     socket.on('spit:spitExecuted', ({ message }) => {
-      console.log('Spit executed:', message);
       setWaitingForOpponentSpit(false);
       addNotification('Spit! New cards dealt to center.');
     });
 
     socket.on('spit:spitError', ({ message }) => {
-      console.log('Spit error:', message);
       setError(message);
       setWaitingForOpponentSpit(false);
       addNotification(message || 'Spit error');
     });
 
     socket.on('spit:roundEnd', ({ eliminated, newRound }) => {
-      console.log(`Round ended: ${eliminated} eliminated. Starting round ${newRound}`);
       setCurrentRound(newRound);
       addNotification(`${eliminated} is out! Round ${newRound} starting...`);
     });
@@ -193,7 +181,6 @@ export const SpitGameProvider = ({ children }) => {
       setError('Not connected to server. Please wait...');
       return;
     }
-    console.log('Emitting spit:join for:', name.trim());
     setLoading(true);
     setError(null);
     setPlayerName(name.trim());
