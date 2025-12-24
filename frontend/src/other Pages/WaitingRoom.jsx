@@ -23,16 +23,6 @@ export default function WaitingRoom() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-      <Button
-        onClick={() => {
-          leaveWaitingRoom();
-          navigate('/');
-        }}
-        variant="outline"
-        className="fixed top-4 left-4 bg-gray-700 hover:bg-gray-600 text-white border-gray-600 z-50"
-      >
-        ← Home
-      </Button>
       <div className="max-w-2xl mx-auto space-y-6">
         <Card className="bg-gray-800 border-gray-700 p-6">
           <div className="text-center">
@@ -75,6 +65,17 @@ export default function WaitingRoom() {
                   size="lg"
                 >
                   {loading ? 'Starting...' : 'Start Scabby Queeny game'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    leaveWaitingRoom();
+                    navigate('/');
+                  }}
+                  variant="outline"
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                  size="lg"
+                >
+                  ← Home
                 </Button>
               </div>
             </div>

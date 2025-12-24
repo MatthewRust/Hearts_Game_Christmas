@@ -1,4 +1,16 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hearts_game
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   backend:
     build: ./backend
     ports:
@@ -6,6 +18,14 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=hearts_game
+      - POSTGRES_PORT=5432
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   frontend:
@@ -18,3 +38,6 @@ services:
     environment:
       - VITE_BACKEND_URL=https://untaxing-adina-peakless.ngrok-free.dev
     restart: unless-stopped
+
+volumes:
+  postgres_data:

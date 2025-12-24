@@ -1,9 +1,9 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import sqlite3 from 'sqlite3';
 import HeartGame from './heartGame.js';
 import { initSpitServer } from '../SpitGame/server.js';
+import { getOrCreatePlayer, incrementWins, getPlayerStats } from '../db.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -19,13 +19,6 @@ const io = new Server(server, {
 });
 
 console.log('Socket.IO server initialized with CORS: *');
-
-const db = new sqlite3.Database('./players.db');
-db.run(`CREATE TABLE IF NOT EXISTS players (
-  id TEXT PRIMARY KEY,
-  name TEXT,
-  wins INTEGER DEFAULT 0
-)`);
 
 const connectedPlayers = new Map();
 
@@ -152,8 +145,16 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('join', ({ name }) => {
+  socket.on('join', async ({ name }) => {
     console.log(`${name} joined the game`);
+    
+    // Get or create player in database
+    try {
+      await getOrCreatePlayer(name);
+    } catch (error) {
+      console.error('Database error on join:', error);
+    }
+    
     const player = { id: socket.id, name };
     connectedPlayers.set(socket.id, player);
     broadcastPlayers();
@@ -227,6 +228,17 @@ io.on('connection', (socket) => {
               heartGame.startNewRound();
               startPassPhase({ initialStart: false });
             } else {
+              // Update winner's stats in database
+              const winner = roundSummary.standings[0];
+              if (winner) {
+                try {
+                  await incrementWins(winner.player);
+                  console.log(`Incremented wins for ${winner.player}`);
+                } catch (error) {
+                  console.error('Error updating winner stats:', error);
+                }
+              }
+              
               io.emit('game:over', { standings: roundSummary.standings, endedAt: Date.now(), totalScores: heartGame.totalScores });
               gameInProgress = false;
               heartGame = null;
