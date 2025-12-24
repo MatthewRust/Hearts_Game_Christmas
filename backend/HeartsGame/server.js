@@ -1,11 +1,14 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
+import cors from 'cors';
 import HeartGame from './heartGame.js';
 import { initSpitServer } from '../SpitGame/server.js';
-import { getOrCreatePlayer, incrementWins, getPlayerStats } from '../db.js';
+import { incrementWins } from '../db.js';
 
 const app = express();
+app.use(cors({ origin: '*', credentials: true }));
+app.options('*', cors());
 const server = http.createServer(app);
 const io = new Server(server, { 
   cors: { 
@@ -145,16 +148,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('join', async ({ name }) => {
+  socket.on('join', ({ name }) => {
     console.log(`${name} joined the game`);
-    
-    // Get or create player in database
-    try {
-      await getOrCreatePlayer(name);
-    } catch (error) {
-      console.error('Database error on join:', error);
-    }
-    
     const player = { id: socket.id, name };
     connectedPlayers.set(socket.id, player);
     broadcastPlayers();
@@ -213,7 +208,7 @@ io.on('connection', (socket) => {
       });
 
       if (result.trickComplete) {
-        setTimeout(() => {
+        setTimeout(async () => {
           heartGame.resolveTrick();
           io.emit('game:trickResolved', {
             scores: heartGame.scores,
@@ -331,6 +326,18 @@ initSpitServer(io);
 
 app.get('/', (req, res) => {
   res.send('Hearts backend running');
+});
+
+// API endpoint for leaderboard
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const { getLeaderboard } = await import('../db.js');
+    const leaderboard = await getLeaderboard();
+    res.json(leaderboard);
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
 });
 
 const PORT = process.env.PORT || 3001;

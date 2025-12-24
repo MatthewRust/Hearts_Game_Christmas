@@ -76,6 +76,13 @@ export default function Home() {
               >
                 ⚡ Spit
               </Button>
+              <Button
+                onClick={() => navigate('/leaderboard')}
+                className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-6 text-lg"
+                size="lg"
+              >
+                🏆 Leaderboard
+              </Button>
             </div>
           </div>
         </Card>

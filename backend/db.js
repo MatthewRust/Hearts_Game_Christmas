@@ -12,38 +12,21 @@ const pool = new Pool({
   port: process.env.POSTGRES_PORT || 5432,
 });
 
-// Initialize database schema on startup
-await initializeDatabase(pool);
+// Initialize database schema on startup (non-blocking)
+initializeDatabase(pool).catch((error) => {
+  console.error('Warning: Failed to initialize database:', error.message);
+  console.error('Database features will be unavailable until connection is established');
+});
 
-// Helper function to get or create a player
-export async function getOrCreatePlayer(username) {
-  try {
-    const result = await pool.query(
-      'INSERT INTO players (username, wins) VALUES ($1, 0) ON CONFLICT (username) DO NOTHING RETURNING *',
-      [username]
-    );
-    
-    if (result.rows.length === 0) {
-      // Player already exists, fetch them
-      const existing = await pool.query(
-        'SELECT * FROM players WHERE username = $1',
-        [username]
-      );
-      return existing.rows[0];
-    }
-    
-    return result.rows[0];
-  } catch (error) {
-    console.error('Error getting/creating player:', error);
-    throw error;
-  }
-}
-
-// Helper function to increment wins
+// Helper function to increment wins (arcade-style: first win = 1, then increment)
 export async function incrementWins(username) {
   try {
+    // Try to insert with 1 win, or increment if already exists
     const result = await pool.query(
-      'UPDATE players SET wins = wins + 1 WHERE username = $1 RETURNING *',
+      `INSERT INTO players (username, wins) VALUES ($1, 1)
+       ON CONFLICT (username) 
+       DO UPDATE SET wins = players.wins + 1
+       RETURNING *`,
       [username]
     );
     return result.rows[0];
@@ -53,26 +36,11 @@ export async function incrementWins(username) {
   }
 }
 
-// Helper function to get player stats
-export async function getPlayerStats(username) {
+// Helper function to get leaderboard (all players)
+export async function getLeaderboard() {
   try {
     const result = await pool.query(
-      'SELECT * FROM players WHERE username = $1',
-      [username]
-    );
-    return result.rows[0];
-  } catch (error) {
-    console.error('Error getting player stats:', error);
-    throw error;
-  }
-}
-
-// Helper function to get leaderboard
-export async function getLeaderboard(limit = 10) {
-  try {
-    const result = await pool.query(
-      'SELECT username, wins FROM players ORDER BY wins DESC LIMIT $1',
-      [limit]
+      'SELECT username, wins FROM players ORDER BY wins DESC'
     );
     return result.rows;
   } catch (error) {

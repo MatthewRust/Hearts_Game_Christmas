@@ -8,6 +8,7 @@ import { SpitGameProvider } from './context/SpitGameContext';
 import Layout from './layout/Layout';
 import Home from './other Pages/Home';
 import WaitingRoom from './other Pages/WaitingRoom';
+import Leaderboard from './other Pages/Leaderboard';
 import GamePage from './Hearts Pages/GamePage';
 import SpitGame from './Spit Game/SpitGame';
 import SpitWaitingRoom from './Spit Game/SpitWaitingRoom';
@@ -23,6 +24,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/waiting-room" element={<WaitingRoom />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/game" element={<GamePage />} />
                   <Route path="/spit-waiting-room" element={<SpitWaitingRoom />} />
                   <Route path="/spit-game" element={<SpitGame />} />
